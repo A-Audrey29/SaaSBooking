@@ -174,6 +174,16 @@ Quand le 3ème centre social utilisateur est onboardé en prod, alors activer :
 
 ---
 
+## TODO avant déploiement
+
+Warnings non bloquants identifiés lors du build du 2026-05-26 — à corriger avant mise en prod Render :
+
+1. **ESLint cassé** — `@eslint/eslintrc` introuvable dans `eslint.config.mjs`. Le lint est sauté silencieusement à chaque build.
+2. **BETTER_AUTH_SECRET trop court** — clé dans `.env.local` insuffisante (< 32 chars). Générer avec `openssl rand -base64 32` et mettre à jour `.env.local` + variables Render.
+3. **Next.js workspace root ambigu** — `package-lock.json` détecté à `/Users/audrey/` perturbe la détection de racine. Corriger via `outputFileTracingRoot` dans `next.config.ts` ou supprimer le lockfile parasite.
+
+---
+
 ## Memory Infrastructure
 
 Le dossier `.claude/memory/` contient 5 registres pour suivre l'état du projet.

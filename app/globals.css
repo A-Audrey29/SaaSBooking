@@ -4,9 +4,9 @@
 
 @layer base {
   :root {
+    /* shadcn tokens — ne pas modifier */
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
@@ -24,6 +24,22 @@
     --input: 240 5.9% 90%;
     --ring: 240 10% 3.9%;
     --radius: 0.5rem;
+
+    /* Design system tokens — écrasent les valeurs shadcn homonymes via cascade CSS */
+    --paper: oklch(98.2% .005 90);
+    --sidebar: oklch(99% .003 90);
+    --card: oklch(100% 0 0);
+    --ink-50: oklch(96.4% .005 90);
+    --ink-150: oklch(92% .005 90);
+    --ink-200: oklch(86% .006 90);
+    --ink-300: oklch(76% .007 90);
+    --ink-400: oklch(60% .008 90);
+    --ink-500: oklch(45% .008 90);
+    --ink-700: oklch(28% .008 90);
+    --ink-900: oklch(15% .008 270);
+    --brand: oklch(62% .16 30);
+    --brand-soft: oklch(93% .05 30);
+    --brand-ink: oklch(45% .15 30);
   }
 
   .dark {
@@ -54,6 +70,6 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-paper text-ink-900;
   }
 }
