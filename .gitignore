@@ -29,8 +29,10 @@ coverage
 
 # Claude Code (local only, never commit)
 .claude/worktrees/
-.claude/memory/
 .claude/settings.local.json
+
+# Graphify (generated artifacts)
+graphify-out/
 
 # Vercel
 .vercel

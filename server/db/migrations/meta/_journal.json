@@ -8,6 +8,13 @@
       "when": 1779352085295,
       "tag": "0000_chunky_randall",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779800495059,
+      "tag": "0001_giant_pandemic",
+      "breakpoints": true
     }
   ]
 }

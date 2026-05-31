@@ -4,7 +4,15 @@ config(); // fallback on .env
 
 import { neon, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
+import { hashPassword } from "better-auth/crypto";
 import * as schema from "../server/db/schema";
+
+// DEV ONLY — never use in prod. Seed users only.
+const DEV_PASSWORD = "dev_seed_2026";
+
+if (process.env.NODE_ENV === "production") {
+  throw new Error("Seed script refuses to run in production");
+}
 
 neonConfig.fetchConnectionCache = true;
 
@@ -14,7 +22,7 @@ const db = drizzle(sql);
 async function main() {
   console.log("→ Seeding database...");
 
-  // Clear existing data (order matters)
+  // Clear existing data (order matters due to FK constraints)
   await db.delete(schema.ticketSlot);
   await db.delete(schema.ticket);
   await db.delete(schema.occurrence);
@@ -26,6 +34,10 @@ async function main() {
   await db.delete(schema.workshopType);
   await db.delete(schema.project);
   await db.delete(schema.centre);
+  await db.delete(schema.account);
+  await db.delete(schema.session);
+  await db.delete(schema.verification);
+  await db.delete(schema.user);
 
   // Create centre
   const [centreData] = await db
@@ -41,7 +53,7 @@ async function main() {
     .returning();
   console.log(`  → Centre: ${centreData.nom}`);
 
-  // Create super admin (no centre_id)
+  // Create seed users
   const [superAdmin] = await db
     .insert(schema.user)
     .values({
@@ -53,7 +65,6 @@ async function main() {
     .returning();
   console.log(`  → Super Admin: ${superAdmin.email}`);
 
-  // Create referents
   const [referent1] = await db
     .insert(schema.user)
     .values({
@@ -74,6 +85,47 @@ async function main() {
     })
     .returning();
   console.log(`  → Referents: ${referent1.email}, ${referent2.email}`);
+
+  const [providerUser] = await db
+    .insert(schema.user)
+    .values({
+      email: "jean.dumont@cs-abymes.gp",
+      name: "Jean Dumont",
+      role: "provider",
+      centreId: centreData.id,
+    })
+    .returning();
+  console.log(`  → Provider user: ${providerUser.email}`);
+
+  // Create account records so Better Auth can authenticate these users
+  const hashedPassword = await hashPassword(DEV_PASSWORD);
+  await db.insert(schema.account).values([
+    {
+      accountId: superAdmin.email,
+      providerId: "credential",
+      userId: superAdmin.id,
+      password: hashedPassword,
+    },
+    {
+      accountId: referent1.email,
+      providerId: "credential",
+      userId: referent1.id,
+      password: hashedPassword,
+    },
+    {
+      accountId: referent2.email,
+      providerId: "credential",
+      userId: referent2.id,
+      password: hashedPassword,
+    },
+    {
+      accountId: providerUser.email,
+      providerId: "credential",
+      userId: providerUser.id,
+      password: hashedPassword,
+    },
+  ]);
+  console.log("  → Account records created");
 
   // Create project
   const [project] = await db
@@ -154,7 +206,7 @@ async function main() {
     .returning();
   console.log(`  → Workshops: ${workshop1.nom}, ${workshop2.nom}`);
 
-  // Create providers
+  // Create providers (business entities — not linked to user accounts in V1)
   const [provider1] = await db
     .insert(schema.provider)
     .values({
