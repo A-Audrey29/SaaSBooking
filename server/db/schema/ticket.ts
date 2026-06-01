@@ -16,7 +16,7 @@ export const ticket = pgTable(
     occurrenceId: uuid("occurrence_id")
       .notNull()
       .references(() => occurrence.id, { onDelete: "cascade" }),
-    statut: text("statut").notNull().default("empty"), // empty | pending | confirmed | refused | cancelled | done | skipped
+    statut: text("statut").notNull().default("empty"), // CHECK constraint DB: empty | pending | confirmed | refused | cancelled | done | skipped
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete
@@ -39,7 +39,7 @@ export const ticketSlot = pgTable(
       .references(() => ticket.id, { onDelete: "cascade" }),
     providerRole: text("provider_role").notNull(), // role code
     providerId: uuid("provider_id").references(() => provider.id, { onDelete: "set null" }),
-    statut: text("statut").notNull().default("empty"), // empty | pending | confirmed | refused | cancelled | done | skipped
+    statut: text("statut").notNull().default("empty"), // CHECK constraint DB: empty | pending | confirmed | refused | cancelled | done | skipped
     sentAt: timestamp("sent_at", { mode: "date", withTimezone: true }), // when request was sent
     respondedAt: timestamp("responded_at", { mode: "date", withTimezone: true }), // when provider responded
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

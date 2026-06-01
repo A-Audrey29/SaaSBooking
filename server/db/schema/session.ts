@@ -5,6 +5,7 @@
 import { pgTable, uuid, timestamp, text, index } from "drizzle-orm/pg-core";
 import { workshop } from "./workshop";
 import { centre } from "./centre";
+import { user } from "./auth";
 
 /**
  * Session group - instance of a workshop for a specific group.
@@ -22,7 +23,8 @@ export const sessionGroup = pgTable(
     nom: text("nom").notNull(), // e.g. "Groupe 1", "Groupe adolescents"
     audience: text("audience"), // e.g. "8 ados 13-16 ans"
     notes: text("notes"),
-    createdBy: uuid("created_by").notNull(), // user id
+    createdBy: uuid("created_by")
+      .references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete

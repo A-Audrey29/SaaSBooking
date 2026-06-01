@@ -18,7 +18,7 @@ export const occurrence = pgTable(
     lieu: text("lieu"),
     salle: text("salle"),
     notes: text("notes"),
-    statut: text("statut").notNull().default("planned"), // planned | confirmed | completed | cancelled
+    statut: text("statut").notNull().default("planned"), // CHECK constraint DB: planned | confirmed | completed | cancelled
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete

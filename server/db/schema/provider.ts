@@ -2,7 +2,7 @@
  * Provider schema - external service providers.
  */
 
-import { pgTable, uuid, timestamp, text, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, timestamp, text, index, unique } from "drizzle-orm/pg-core";
 import { centre } from "./centre";
 import { project } from "./project";
 
@@ -51,5 +51,7 @@ export const providerAssignment = pgTable(
   (table) => ({
     providerIdx: index("provider_assignment_provider_idx").on(table.providerId),
     projectIdx: index("provider_assignment_project_idx").on(table.projectId),
+    uniquePerProject: unique("provider_assignment_unique_per_project")
+      .on(table.providerId, table.projectId, table.role),
   })
 );

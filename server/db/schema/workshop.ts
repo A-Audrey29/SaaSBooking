@@ -2,7 +2,7 @@
  * Workshop schema - workshops and workshop types.
  */
 
-import { pgTable, uuid, timestamp, text, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, timestamp, text, integer, index, unique } from "drizzle-orm/pg-core";
 import { project } from "./project";
 
 /**
@@ -65,5 +65,7 @@ export const providerRole = pgTable(
   },
   (table) => ({
     workshopTypeIdx: index("provider_role_workshop_type_idx").on(table.workshopTypeId),
+    uniquePerType: unique("provider_role_unique_per_type")
+      .on(table.workshopTypeId, table.role),
   })
 );

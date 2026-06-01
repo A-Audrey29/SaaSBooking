@@ -20,6 +20,7 @@ Schema:
 | BDR-003 | 2026-05-11 | Hosting | Render (pas Vercel) |
 | BDR-004 | 2026-05-11 | Multi-tenant | Isolation applicative centre_id (pas RLS) |
 | BDR-005 | 2026-05-11 | Auth flow | Magic link uniquement V1 |
+| BDR-006 | 2026-06-01 | Contraintes DB | Stratégie contraintes rôles provider (V1 vs V2) |
 
 ---
 
@@ -75,3 +76,25 @@ Schema:
   - Password: activable V1.5 si demande utilisateur
 - **Status**: active
 - **Note**: [app/login/page.tsx](app/login/page.tsx) implémente actuellement email+password — À corriger avant livraison V1
+
+### BDR-006: Stratégie contraintes rôles provider (V1 vs V2)
+- **Date**: 2026-06-01
+- **Title**: Provider roles constraints strategy
+- **Decision**: Migration 0002 ajoute contraintes DB selon stratégie différenciée :
+  - `user.role` (enum fixe 4 valeurs) : CHECK constraint DB + validation Zod
+  - `provider_assignment.role` et `ticket_slot.providerRole` : validation Zod uniquement, pas de CHECK ni FK en V1
+  - `provider_role` : UNIQUE (workshop_type_id, role) pour préparer V2
+- **Why**:
+  - `user.role` = enum fixe code → CHECK safe et utile
+  - Rôles provider référencent table extensible `provider_role` (gérée via UI/seed)
+  - FK propre vers `provider_role.id` requiert refactor colonnes `text` → `uuid`
+  - YAGNI V1 — validation Zod suffit, FK plus tard
+  - UNIQUE sur `provider_role` évite doublons, prépare FK V2 proprement
+- **Alternatives**:
+  - CHECK constraint fixe sur codes rôles provider : rejeté — rigide, contredit table extensible
+  - FK immédiate vers `provider_role.id` : rejeté V1 — refactor lourd, pas critique pour MVP
+- **V2 prévu**:
+  - Refactor `provider_assignment.role` et `ticket_slot.providerRole` vers FK `provider_role.id`
+  - Migration data : mapper codes texte → UUID
+  - Garantit cohérence référentielle complète
+- **Status**: active

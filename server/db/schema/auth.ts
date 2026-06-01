@@ -21,7 +21,7 @@ export const user = pgTable("user", {
   image: text("image"),
   // Multi-tenant extensions
   centreId: uuid("centre_id").references(() => centre.id, { onDelete: "set null" }), // nullable for super_admin
-  role: text("role").notNull(), // 'super_admin' | 'project_admin' | 'referent' | 'provider'
+  role: text("role").notNull(), // CHECK constraint DB: super_admin | project_admin | referent | provider
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete

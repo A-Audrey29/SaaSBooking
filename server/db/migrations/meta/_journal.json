@@ -15,6 +15,13 @@
       "when": 1779800495059,
       "tag": "0001_giant_pandemic",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780314813428,
+      "tag": "0002_red_payback",
+      "breakpoints": true
     }
   ]
 }
