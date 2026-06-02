@@ -4,6 +4,7 @@
 
 import { pgTable, uuid, timestamp, text, integer, index } from "drizzle-orm/pg-core";
 import { sessionGroup } from "./session";
+import { workshopRoleGroup } from "./workshop";
 
 export const occurrence = pgTable(
   "occurrence",
@@ -19,7 +20,8 @@ export const occurrence = pgTable(
     salle: text("salle"),
     notes: text("notes"),
     statut: text("statut").notNull().default("planned"), // CHECK constraint DB: planned | confirmed | completed | cancelled
-    workshopRoleGroupId: uuid("workshop_role_group_id"), // FK added in migration 0004 after table creation
+    workshopRoleGroupId: uuid("workshop_role_group_id")
+      .references(() => workshopRoleGroup.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete

@@ -2,7 +2,7 @@
  * Workshop schema - workshops and workshop types.
  */
 
-import { pgTable, uuid, timestamp, text, integer, index, unique } from "drizzle-orm/pg-core";
+import { pgTable, uuid, timestamp, text, integer, index, unique, boolean } from "drizzle-orm/pg-core";
 import { centre } from "./centre";
 import { project } from "./project";
 
@@ -71,5 +71,51 @@ export const providerRole = pgTable(
     workshopTypeIdx: index("provider_role_workshop_type_idx").on(table.workshopTypeId),
     uniquePerType: unique("provider_role_unique_per_type")
       .on(table.workshopTypeId, table.role),
+  })
+);
+
+/**
+ * Workshop role group - required role groups for workshop types.
+ * Allows OR logic between groups (referent chooses one group per occurrence).
+ */
+export const workshopRoleGroup = pgTable(
+  "workshop_role_group",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workshopTypeId: uuid("workshop_type_id")
+      .notNull()
+      .references(() => workshopType.id, { onDelete: "cascade" }),
+    label: text("label").notNull(), // e.g. "Configuration standard"
+    ordre: integer("ordre").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete
+  },
+  (table) => ({
+    workshopTypeIdx: index("workshop_role_group_workshop_type_idx").on(table.workshopTypeId),
+  })
+);
+
+/**
+ * Workshop role slot - individual role within a role group.
+ * 1 slot = 1 person. If admin wants 2 animators, create 2 slots.
+ */
+export const workshopRoleSlot = pgTable(
+  "workshop_role_slot",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workshopRoleGroupId: uuid("workshop_role_group_id")
+      .notNull()
+      .references(() => workshopRoleGroup.id, { onDelete: "cascade" }),
+    role: text("role").notNull(), // e.g. "Psychologue", "Coach sportif"
+    couleur: text("couleur"), // hex color, nullable
+    isOptional: boolean("is_optional").notNull().default(false), // pre-unchecked in UI
+    ordre: integer("ordre").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete
+  },
+  (table) => ({
+    workshopRoleGroupIdx: index("workshop_role_slot_workshop_role_group_idx").on(table.workshopRoleGroupId),
   })
 );
