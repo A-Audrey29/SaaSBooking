@@ -249,6 +249,18 @@ liste". Migration future, ne casse pas la structure actuelle.
 Valeurs autorisées (CHECK constraint existant) :
 `empty, pending, confirmed, refused, cancelled, done, skipped`
 
+> **⚠️ Distinction critique — `skipped` ≠ `cancelled`**
+>
+> **`skipped`** = le référent a intentionnellement écarté ce besoin.
+> La séance a lieu normalement. Le slot n'est pas à pourvoir.
+> Exemple : "pas besoin de coach sportif pour cette séance-ci".
+>
+> **`cancelled`** = l'occurrence entière est annulée.
+> La séance n'a pas lieu. Tous les slots tombent en cascade.
+> Exemple : "la séance du 14 mai est annulée".
+>
+> Confondre les deux fausse les stats et le calcul de `occurrence.statut`.
+
 Transitions autorisées :
 
 | De | Vers | Acteur | Effet |
@@ -275,6 +287,12 @@ Transitions interdites (à coder dans la fonction de mutation, à tester) :
 
 Valeurs autorisées (CHECK constraint existant) :
 `planned, confirmed, completed, cancelled`
+
+> **⚠️ Précondition création occurrence** : le référent ne peut créer une
+> occurrence que si son centre possède au moins un `workshop_type` avec
+> `centre_id = ctx.centreId`. Un centre nouvellement créé démarre avec un
+> catalogue vide (pas de clone global en V1). Si le catalogue est vide,
+> bloquer la création et afficher un message explicite.
 
 **Statut dérivé** par fonction unique `recomputeOccurrenceStatut(occurrenceId)`,
 appelée systématiquement dans la même transaction que toute mutation de
