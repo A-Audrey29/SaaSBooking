@@ -53,28 +53,6 @@ export const workshop = pgTable(
 );
 
 /**
- * Provider role - required roles for workshop types.
- */
-export const providerRole = pgTable(
-  "provider_role",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    workshopTypeId: uuid("workshop_type_id")
-      .notNull()
-      .references(() => workshopType.id, { onDelete: "cascade" }),
-    role: text("role").notNull(), // e.g. "Psychologue", "Coach sportif"
-    couleur: text("couleur").notNull().default("#888888"), // hex color
-    ordre: integer("ordre").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => ({
-    workshopTypeIdx: index("provider_role_workshop_type_idx").on(table.workshopTypeId),
-    uniquePerType: unique("provider_role_unique_per_type")
-      .on(table.workshopTypeId, table.role),
-  })
-);
-
-/**
  * Workshop role group - required role groups for workshop types.
  * Allows OR logic between groups (referent chooses one group per occurrence).
  */
