@@ -32,6 +32,10 @@ Claude Code n'écrit rien sans preuve par lecture ou exécution. Concrètement :
 4. **Avant d'affirmer qu'une table / colonne existe**, l'avoir vue dans le schéma TS ou via `\d` / `information_schema`.
 5. **Si impossible de vérifier** → écrire littéralement `« Je ne sais pas, à vérifier »`. Jamais supposer.
 
+## Spec fonctionnelle
+**`docs/spec-v1.md`** — source de vérité fonctionnelle V1 (modèle données complet, rôles, flux, règles métier).
+Lire avant tout ajout ou modification de feature, table, ou flux métier.
+
 ## Memory — consulter AVANT modifications
 Fichiers dans `.claude/memory/` :
 
@@ -85,3 +89,4 @@ Avant d'ajouter CHECK, UNIQUE ou FK sur une colonne :
 2. Identifier la source de vérité : enum fixe code ou table référence ?
 3. Si table référence existe → pas de CHECK fixe, analyser FK possible
 4. Documenter le choix dans decisions.md avec la raison
+
