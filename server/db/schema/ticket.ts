@@ -38,6 +38,7 @@ export const ticketSlot = pgTable(
       .notNull()
       .references(() => ticket.id, { onDelete: "cascade" }),
     providerRole: text("provider_role").notNull(), // role code
+    workshopRoleSlotId: uuid("workshop_role_slot_id"), // traceability, no FK (no cascade)
     providerId: uuid("provider_id").references(() => provider.id, { onDelete: "set null" }),
     statut: text("statut").notNull().default("empty"), // CHECK constraint DB: empty | pending | confirmed | refused | cancelled | done | skipped
     sentAt: timestamp("sent_at", { mode: "date", withTimezone: true }), // when request was sent

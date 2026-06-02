@@ -3,6 +3,7 @@
  */
 
 import { pgTable, uuid, timestamp, text, integer, index, unique } from "drizzle-orm/pg-core";
+import { centre } from "./centre";
 import { project } from "./project";
 
 /**
@@ -12,14 +13,17 @@ export const workshopType = pgTable(
   "workshop_type",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    centreId: uuid("centre_id").references(() => centre.id, { onDelete: "set null" }),
     code: text("code").notNull().unique(), // e.g. "PARENTALITE", "SPORT_SANTE"
     nom: text("nom").notNull(),
     description: text("description"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete
   },
   (table) => ({
     codeIdx: index("workshop_type_code_idx").on(table.code),
+    centreIdx: index("workshop_type_centre_idx").on(table.centreId),
   })
 );
 

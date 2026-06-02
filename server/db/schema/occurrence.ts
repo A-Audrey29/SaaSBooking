@@ -19,6 +19,7 @@ export const occurrence = pgTable(
     salle: text("salle"),
     notes: text("notes"),
     statut: text("statut").notNull().default("planned"), // CHECK constraint DB: planned | confirmed | completed | cancelled
+    workshopRoleGroupId: uuid("workshop_role_group_id"), // FK added in migration 0004 after table creation
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete
