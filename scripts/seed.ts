@@ -30,7 +30,8 @@ async function main() {
   await db.delete(schema.workshop);
   await db.delete(schema.providerAssignment);
   await db.delete(schema.provider);
-  await db.delete(schema.providerRole);
+  await db.delete(schema.workshopRoleSlot);
+  await db.delete(schema.workshopRoleGroup);
   await db.delete(schema.workshopType);
   await db.delete(schema.project);
   await db.delete(schema.centre);
@@ -141,10 +142,11 @@ async function main() {
     .returning();
   console.log(`  → Project: ${project.nom}`);
 
-  // Create workshop types
+  // Create workshop types (with centre_id)
   const [type1] = await db
     .insert(schema.workshopType)
     .values({
+      centreId: centreData.id,
       code: "PARENTALITE",
       nom: "Parentalité",
       description: "Ateliers d'accompagnement à la parentalité",
@@ -154,6 +156,7 @@ async function main() {
   const [type2] = await db
     .insert(schema.workshopType)
     .values({
+      centreId: centreData.id,
       code: "SPORT_SANTE",
       nom: "Sport et Santé",
       description: "Activités physiques pour la santé",
@@ -163,6 +166,7 @@ async function main() {
   const [type3] = await db
     .insert(schema.workshopType)
     .values({
+      centreId: centreData.id,
       code: "MEDIATION",
       nom: "Médiation",
       description: "Ateliers de médiation familiale",
@@ -170,15 +174,67 @@ async function main() {
     .returning();
   console.log(`  → Workshop types: ${type1.code}, ${type2.code}, ${type3.code}`);
 
-  // Create provider roles
-  await db.insert(schema.providerRole).values([
-    { workshopTypeId: type1.id, role: "Psychologue", couleur: "#1f3a5f", ordre: 0 },
-    { workshopTypeId: type1.id, role: "Éducateur", couleur: "#2f5d3a", ordre: 1 },
-    { workshopTypeId: type1.id, role: "Animateur", couleur: "#b78a2a", ordre: 2 },
-    { workshopTypeId: type2.id, role: "Coach sportif", couleur: "#a64b1f", ordre: 0 },
-    { workshopTypeId: type2.id, role: "Éducateur sportif", couleur: "#7a1f3a", ordre: 1 },
+  // Create workshop_role_group + workshop_role_slot
+  const [group1] = await db
+    .insert(schema.workshopRoleGroup)
+    .values({
+      workshopTypeId: type1.id,
+      label: "Configuration standard",
+      ordre: 0,
+    })
+    .returning();
+
+  await db.insert(schema.workshopRoleSlot).values([
+    {
+      workshopRoleGroupId: group1.id,
+      role: "Psychologue",
+      couleur: "#1f3a5f",
+      isOptional: false,
+      ordre: 0,
+    },
+    {
+      workshopRoleGroupId: group1.id,
+      role: "Éducateur",
+      couleur: "#2f5d3a",
+      isOptional: false,
+      ordre: 1,
+    },
+    {
+      workshopRoleGroupId: group1.id,
+      role: "Animateur",
+      couleur: "#b78a2a",
+      isOptional: false,
+      ordre: 2,
+    },
   ]);
-  console.log("  → Provider roles created");
+
+  const [group2] = await db
+    .insert(schema.workshopRoleGroup)
+    .values({
+      workshopTypeId: type2.id,
+      label: "Configuration standard",
+      ordre: 0,
+    })
+    .returning();
+
+  await db.insert(schema.workshopRoleSlot).values([
+    {
+      workshopRoleGroupId: group2.id,
+      role: "Coach sportif",
+      couleur: "#a64b1f",
+      isOptional: false,
+      ordre: 0,
+    },
+    {
+      workshopRoleGroupId: group2.id,
+      role: "Éducateur sportif",
+      couleur: "#7a1f3a",
+      isOptional: false,
+      ordre: 1,
+    },
+  ]);
+
+  console.log("  → Workshop role groups: 2 groups, 5 slots created (MEDIATION: 0 group, Option B)");
 
   // Create workshops
   const [workshop1] = await db
