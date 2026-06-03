@@ -1,0 +1,357 @@
+audrey@mac-4 RepoSaaSBooking % rm -rf .next
+audrey@mac-4 RepoSaaSBooking % pnpm dev
+$ next dev
+   ▲ Next.js 15.5.18
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.28:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1912ms
+ ○ Compiling / ...
+ ✓ Compiled / in 5.3s (1437 modules)
+2026-06-03T14:34:58.934Z WARN [Better Auth]: [better-auth] Warning: your BETTER_AUTH_SECRET should be at least 32 characters long for adequate security. Generate one with `npx auth secret` or `openssl rand -base64 32`.
+ ✓ Compiled in 963ms (227 modules)
+ GET / 200 in 6444ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 2.7s (1590 modules)
+ GET /login 200 in 3258ms
+ ✓ Compiled /api/auth/[...all] in 473ms (1597 modules)
+2026-06-03T14:35:13.184Z WARN [Better Auth]: [better-auth] Warning: your BETTER_AUTH_SECRET should be at least 32 characters long for adequate security. Generate one with `npx auth secret` or `openssl rand -base64 32`.
+2026-06-03T14:35:14.197Z WARN [Better Auth]: [better-auth] Warning: your BETTER_AUTH_SECRET should be at least 32 characters long for adequate security. Generate one with `npx auth secret` or `openssl rand -base64 32`.
+Query: insert into "verification" ("id", "identifier", "value", "expires_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6) returning "id", "identifier", "value", "expires_at", "created_at", "updated_at" -- params: ["Mn497xqez10ckf4J9xhFqLlEypTsHtjI", "gfYLGfmnnhrvVspDSHiLnpLJUQtOZEtG", "{\"email\":\"admin@saasbooking.dev\",\"attempt\":0}", "2026-06-03T14:40:14.235Z", "2026-06-03T14:35:14.235Z", "2026-06-03T14:35:14.235Z"]
+[MAGIC LINK] to=admin@saasbooking.dev url=http://localhost:3000/api/auth/magic-link/verify?token=gfYLGfmnnhrvVspDSHiLnpLJUQtOZEtG&callbackURL=%2Fadmin
+ POST /api/auth/sign-in/magic-link 200 in 2759ms
+Query: select "id", "identifier", "value", "expires_at", "created_at", "updated_at" from "verification" where "verification"."identifier" = $1 order by "verification"."created_at" desc limit $2 -- params: ["gfYLGfmnnhrvVspDSHiLnpLJUQtOZEtG", 1]
+Query: select "id", "identifier", "value", "expires_at", "created_at", "updated_at" from "verification" where "verification"."expires_at" < $1 limit $2 -- params: ["2026-06-03T14:35:36.126Z", 100]
+Query: delete from "verification" where "verification"."expires_at" < $1 -- params: ["2026-06-03T14:35:36.126Z"]
+Query: update "verification" set "value" = $1, "updated_at" = $2 where "verification"."identifier" = $3 returning "id", "identifier", "value", "expires_at", "created_at", "updated_at" -- params: ["{\"email\":\"admin@saasbooking.dev\",\"attempt\":1}", "2026-06-03T14:35:36.248Z", "gfYLGfmnnhrvVspDSHiLnpLJUQtOZEtG"]
+Query: select "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at" from "user" where "user"."email" = $1 -- params: ["admin@saasbooking.dev"]
+2026-06-03T14:35:36.324Z ERROR [Better Auth]: TypeError [TypeError: value.toISOString is not a function]
+=== FULL STACK ===
+TypeError: value.toISOString is not a function
+    at PgTimestamp.mapToDriverValue (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/columns/timestamp.js:47:18)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:170:73)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:134:21)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:134:21)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:91:26)
+    at Object.startActiveSpan (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/tracing.js:14:14)
+    at SQL.toQuery (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:90:60)
+    at PgDialect.sqlToQuery (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/dialect.js:434:17)
+    at QueryPromise._prepare (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/query-builders/update.js:202:58)
+    at QueryPromise.execute (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/query-builders/update.js:219:17)
+    at QueryPromise.then (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/query-promise.js:26:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+=== FULL STACK ===
+TypeError: value.toISOString is not a function
+    at PgTimestamp.mapToDriverValue (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/columns/timestamp.js:47:18)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:170:73)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:134:21)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:134:21)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:91:26)
+    at Object.startActiveSpan (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/tracing.js:14:14)
+    at SQL.toQuery (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:90:60)
+    at PgDialect.sqlToQuery (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/dialect.js:434:17)
+    at QueryPromise._prepare (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/query-builders/update.js:202:58)
+    at QueryPromise.execute (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/query-builders/update.js:219:17)
+    at QueryPromise.then (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/query-promise.js:26:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+# SERVER_ERROR:  [TypeError: value.toISOString is not a function]
+=== FULL STACK ===
+TypeError: value.toISOString is not a function
+    at PgTimestamp.mapToDriverValue (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/columns/timestamp.js:47:18)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:170:73)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:134:21)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:134:21)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:91:26)
+    at Object.startActiveSpan (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/tracing.js:14:14)
+    at SQL.toQuery (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:90:60)
+    at PgDialect.sqlToQuery (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/dialect.js:434:17)
+    at QueryPromise._prepare (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/query-builders/update.js:202:58)
+    at QueryPromise.execute (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/query-builders/update.js:219:17)
+    at QueryPromise.then (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/query-promise.js:26:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+=== FULL STACK ===
+TypeError: value.toISOString is not a function
+    at PgTimestamp.mapToDriverValue (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/columns/timestamp.js:47:18)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:170:73)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:134:21)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:134:21)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:112:32)
+    at eval (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:91:26)
+    at Object.startActiveSpan (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/tracing.js:14:14)
+    at SQL.toQuery (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/sql/sql.js:90:60)
+    at PgDialect.sqlToQuery (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/dialect.js:434:17)
+    at QueryPromise._prepare (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/query-builders/update.js:202:58)
+    at QueryPromise.execute (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/query-builders/update.js:219:17)
+    at QueryPromise.then (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/query-promise.js:26:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ GET /api/auth/magic-link/verify?token=gfYLGfmnnhrvVspDSHiLnpLJUQtOZEtG&callbackURL=%2Fadmin 500 in 419ms
+2026-06-03T14:35:37.112Z WARN [Better Auth]: [better-auth] Warning: your BETTER_AUTH_SECRET should be at least 32 characters long for adequate security. Generate one with `npx auth secret` or `openssl rand -base64 32`.
+
+
+
+
+
+
+
+audrey@mac-4 RepoSaaSBooking % rm -rf .next
+audrey@mac-4 RepoSaaSBooking % npm dev
+Unknown command: "dev"
+
+
+Did you mean this?
+  npm run dev # run the "dev" package script
+To see a list of supported npm commands, run:
+  npm help
+audrey@mac-4 RepoSaaSBooking % pnpm dev
+$ next dev
+   ▲ Next.js 15.5.18
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.28:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1874ms
+ ○ Compiling / ...
+ ✓ Compiled / in 5s (1437 modules)
+2026-06-03T14:44:25.214Z WARN [Better Auth]: [better-auth] Warning: your BETTER_AUTH_SECRET should be at least 32 characters long for adequate security. Generate one with `npx auth secret` or `openssl rand -base64 32`.
+ ✓ Compiled in 827ms (227 modules)
+ GET / 200 in 5860ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1259ms (1590 modules)
+ GET /login 200 in 1663ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled /api/auth/[...all] in 496ms (1597 modules)
+2026-06-03T14:44:37.806Z WARN [Better Auth]: [better-auth] Warning: your BETTER_AUTH_SECRET should be at least 32 characters long for adequate security. Generate one with `npx auth secret` or `openssl rand -base64 32`.
+2026-06-03T14:44:38.862Z WARN [Better Auth]: [better-auth] Warning: your BETTER_AUTH_SECRET should be at least 32 characters long for adequate security. Generate one with `npx auth secret` or `openssl rand -base64 32`.
+Query: insert into "verification" ("id", "identifier", "value", "expires_at", "created_at", "updated_at") values ($1, $2, $3, $4, $5, $6) returning "id", "identifier", "value", "expires_at", "created_at", "updated_at" -- params: ["TQxNxt8z8Beoo9m3oJXE6GotPCdsORUW", "grfhPAQtcnnZVQZDQhxLWeOAnryrBDVH", "{\"email\":\"admin@saasbooking.dev\",\"attempt\":0}", "2026-06-03T14:49:38.908Z", "2026-06-03T14:44:38.908Z", "2026-06-03T14:44:38.908Z"]
+[MAGIC LINK] to=admin@saasbooking.dev url=http://localhost:3000/api/auth/magic-link/verify?token=grfhPAQtcnnZVQZDQhxLWeOAnryrBDVH&callbackURL=%2Fadmin
+ POST /api/auth/sign-in/magic-link 200 in 3007ms
+Query: select "id", "identifier", "value", "expires_at", "created_at", "updated_at" from "verification" where "verification"."identifier" = $1 order by "verification"."created_at" desc limit $2 -- params: ["grfhPAQtcnnZVQZDQhxLWeOAnryrBDVH", 1]
+Query: select "id", "identifier", "value", "expires_at", "created_at", "updated_at" from "verification" where "verification"."expires_at" < $1 limit $2 -- params: ["2026-06-03T14:45:53.333Z", 100]
+Query: delete from "verification" where "verification"."expires_at" < $1 -- params: ["2026-06-03T14:45:53.333Z"]
+Query: update "verification" set "value" = $1, "updated_at" = $2 where "verification"."identifier" = $3 returning "id", "identifier", "value", "expires_at", "created_at", "updated_at" -- params: ["{\"email\":\"admin@saasbooking.dev\",\"attempt\":1}", "2026-06-03T14:45:53.472Z", "grfhPAQtcnnZVQZDQhxLWeOAnryrBDVH"]
+Query: select "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at" from "user" where "user"."email" = $1 -- params: ["admin@saasbooking.dev"]
+Query: update "user" set "emailVerified" = $1, "updated_at" = $2 where "user"."id" = $3 returning "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at" -- params: [true, "2026-06-03T14:45:53.558Z", "c7f117a4-bab4-483c-a489-7bf3a71c49e3"]
+2026-06-03T14:45:53.594Z ERROR [Better Auth]: Error [Error: Failed query: update "user" set "emailVerified" = $1, "updated_at" = $2 where "user"."id" = $3 returning "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at"
+params: true,Wed Jun 03 2026 16:45:53 GMT+0200 (heure d’été d’Europe centrale),c7f117a4-bab4-483c-a489-7bf3a71c49e3] {
+  query: 'update "user" set "emailVerified" = $1, "updated_at" = $2 where "user"."id" = $3 returning "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at"',
+  params: [Array],
+  [cause]: [Error [NeonDbError]: invalid input syntax for type timestamp with time zone: "true"] {
+    severity: 'ERROR',
+    code: '22007',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: "unnamed portal parameter $1 = '...'",
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'datetime.c',
+    line: '4140',
+    routine: 'DateTimeParseError',
+    sourceError: undefined
+  }
+}
+=== FULL STACK ===
+Error: Failed query: update "user" set "emailVerified" = $1, "updated_at" = $2 where "user"."id" = $3 returning "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at"
+params: true,Wed Jun 03 2026 16:45:53 GMT+0200 (heure d’été d’Europe centrale),c7f117a4-bab4-483c-a489-7bf3a71c49e3
+    at NeonHttpPreparedQuery.queryWithCache (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/session.js:53:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async NeonHttpPreparedQuery.execute (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/neon-http/session.js:57:20)
+    at async withReturning (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+drizzle-adapter@1.6.10_@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@_9c877428b970b2c43c61ff9c7641d0f0/node_modules/@better-auth/drizzle-adapter/dist/index.mjs:63:45)
+    at async Object.update (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+drizzle-adapter@1.6.10_@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@_9c877428b970b2c43c61ff9c7641d0f0/node_modules/@better-auth/drizzle-adapter/dist/index.mjs:406:12)
+    at async Object.update (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/db/adapter/factory.mjs:487:16)
+    at async updateWithHooks (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/db/with-hooks.mjs:71:69)
+    at async Object.updateUser (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/db/internal-adapter.mjs:492:17)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/plugins/magic-link/index.mjs:162:37)
+    at async wrapped (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/api/index.mjs:49:11)
+    at async internalHandler (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/endpoint.mjs:38:20)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/api/to-auth-endpoints.mjs:113:21)
+    at async processRequest (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/router.mjs:92:11)
+    at async handler (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/router.mjs:115:16)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/context/transaction.mjs:46:13)
+    at async AppRouteRouteModule.do (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+    at async AppRouteRouteModule.handle (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:45978)
+    at async responseGenerator (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:203:38)
+    at async AppRouteRouteModule.handleResponse (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:1:195304)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:265:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:317:13)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1430:9)
+    at async DevServer.renderPageComponent (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1482:24)
+    at async DevServer.renderToResponseImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1522:32)
+    at async DevServer.pipeImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1026:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/next-server.js:394:17)
+    at async DevServer.handleRequestImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:917:17)
+    at async /Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/next-dev-server.js:400:20
+    at async Span.traceAsyncFn (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/next-dev-server.js:396:24)
+    at async invokeRender (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:240:21)
+    at async handleRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:437:24)
+    at async requestHandlerImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:485:13)
+    at async Server.requestListener (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/start-server.js:226:13)
+=== FULL STACK ===
+Error: Failed query: update "user" set "emailVerified" = $1, "updated_at" = $2 where "user"."id" = $3 returning "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at"
+params: true,Wed Jun 03 2026 16:45:53 GMT+0200 (heure d’été d’Europe centrale),c7f117a4-bab4-483c-a489-7bf3a71c49e3
+    at NeonHttpPreparedQuery.queryWithCache (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/session.js:53:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async NeonHttpPreparedQuery.execute (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/neon-http/session.js:57:20)
+    at async withReturning (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+drizzle-adapter@1.6.10_@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@_9c877428b970b2c43c61ff9c7641d0f0/node_modules/@better-auth/drizzle-adapter/dist/index.mjs:63:45)
+    at async Object.update (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+drizzle-adapter@1.6.10_@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@_9c877428b970b2c43c61ff9c7641d0f0/node_modules/@better-auth/drizzle-adapter/dist/index.mjs:406:12)
+    at async Object.update (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/db/adapter/factory.mjs:487:16)
+    at async updateWithHooks (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/db/with-hooks.mjs:71:69)
+    at async Object.updateUser (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/db/internal-adapter.mjs:492:17)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/plugins/magic-link/index.mjs:162:37)
+    at async wrapped (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/api/index.mjs:49:11)
+    at async internalHandler (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/endpoint.mjs:38:20)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/api/to-auth-endpoints.mjs:113:21)
+    at async processRequest (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/router.mjs:92:11)
+    at async handler (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/router.mjs:115:16)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/context/transaction.mjs:46:13)
+    at async AppRouteRouteModule.do (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+    at async AppRouteRouteModule.handle (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:45978)
+    at async responseGenerator (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:203:38)
+    at async AppRouteRouteModule.handleResponse (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:1:195304)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:265:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:317:13)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1430:9)
+    at async DevServer.renderPageComponent (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1482:24)
+    at async DevServer.renderToResponseImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1522:32)
+    at async DevServer.pipeImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1026:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/next-server.js:394:17)
+    at async DevServer.handleRequestImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:917:17)
+    at async /Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/next-dev-server.js:400:20
+    at async Span.traceAsyncFn (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/next-dev-server.js:396:24)
+    at async invokeRender (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:240:21)
+    at async handleRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:437:24)
+    at async requestHandlerImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:485:13)
+    at async Server.requestListener (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/start-server.js:226:13)
+# SERVER_ERROR:  [Error: Failed query: update "user" set "emailVerified" = $1, "updated_at" = $2 where "user"."id" = $3 returning "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at"
+params: true,Wed Jun 03 2026 16:45:53 GMT+0200 (heure d’été d’Europe centrale),c7f117a4-bab4-483c-a489-7bf3a71c49e3] {
+  query: 'update "user" set "emailVerified" = $1, "updated_at" = $2 where "user"."id" = $3 returning "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at"',
+  params: [Array],
+  [cause]: [Error [NeonDbError]: invalid input syntax for type timestamp with time zone: "true"] {
+    severity: 'ERROR',
+    code: '22007',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: "unnamed portal parameter $1 = '...'",
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'datetime.c',
+    line: '4140',
+    routine: 'DateTimeParseError',
+    sourceError: undefined
+  }
+}
+=== FULL STACK ===
+Error: Failed query: update "user" set "emailVerified" = $1, "updated_at" = $2 where "user"."id" = $3 returning "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at"
+params: true,Wed Jun 03 2026 16:45:53 GMT+0200 (heure d’été d’Europe centrale),c7f117a4-bab4-483c-a489-7bf3a71c49e3
+    at NeonHttpPreparedQuery.queryWithCache (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/session.js:53:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async NeonHttpPreparedQuery.execute (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/neon-http/session.js:57:20)
+    at async withReturning (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+drizzle-adapter@1.6.10_@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@_9c877428b970b2c43c61ff9c7641d0f0/node_modules/@better-auth/drizzle-adapter/dist/index.mjs:63:45)
+    at async Object.update (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+drizzle-adapter@1.6.10_@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@_9c877428b970b2c43c61ff9c7641d0f0/node_modules/@better-auth/drizzle-adapter/dist/index.mjs:406:12)
+    at async Object.update (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/db/adapter/factory.mjs:487:16)
+    at async updateWithHooks (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/db/with-hooks.mjs:71:69)
+    at async Object.updateUser (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/db/internal-adapter.mjs:492:17)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/plugins/magic-link/index.mjs:162:37)
+    at async wrapped (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/api/index.mjs:49:11)
+    at async internalHandler (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/endpoint.mjs:38:20)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/api/to-auth-endpoints.mjs:113:21)
+    at async processRequest (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/router.mjs:92:11)
+    at async handler (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/router.mjs:115:16)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/context/transaction.mjs:46:13)
+    at async AppRouteRouteModule.do (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+    at async AppRouteRouteModule.handle (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:45978)
+    at async responseGenerator (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:203:38)
+    at async AppRouteRouteModule.handleResponse (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:1:195304)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:265:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:317:13)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1430:9)
+    at async DevServer.renderPageComponent (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1482:24)
+    at async DevServer.renderToResponseImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1522:32)
+    at async DevServer.pipeImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1026:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/next-server.js:394:17)
+    at async DevServer.handleRequestImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:917:17)
+    at async /Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/next-dev-server.js:400:20
+    at async Span.traceAsyncFn (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/next-dev-server.js:396:24)
+    at async invokeRender (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:240:21)
+    at async handleRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:437:24)
+    at async requestHandlerImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:485:13)
+    at async Server.requestListener (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/start-server.js:226:13)
+=== FULL STACK ===
+Error: Failed query: update "user" set "emailVerified" = $1, "updated_at" = $2 where "user"."id" = $3 returning "id", "email", "emailVerified", "name", "image", "centre_id", "role", "created_at", "updated_at", "deleted_at"
+params: true,Wed Jun 03 2026 16:45:53 GMT+0200 (heure d’été d’Europe centrale),c7f117a4-bab4-483c-a489-7bf3a71c49e3
+    at NeonHttpPreparedQuery.queryWithCache (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/pg-core/session.js:53:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async NeonHttpPreparedQuery.execute (webpack-internal:///(rsc)/./node_modules/.pnpm/drizzle-orm@0.45.2_@neondatabase+serverless@0.10.4_@opentelemetry+api@1.9.1_@types+pg@8.11.6_kysely@0.28.17/node_modules/drizzle-orm/neon-http/session.js:57:20)
+    at async withReturning (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+drizzle-adapter@1.6.10_@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@_9c877428b970b2c43c61ff9c7641d0f0/node_modules/@better-auth/drizzle-adapter/dist/index.mjs:63:45)
+    at async Object.update (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+drizzle-adapter@1.6.10_@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@_9c877428b970b2c43c61ff9c7641d0f0/node_modules/@better-auth/drizzle-adapter/dist/index.mjs:406:12)
+    at async Object.update (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/db/adapter/factory.mjs:487:16)
+    at async updateWithHooks (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/db/with-hooks.mjs:71:69)
+    at async Object.updateUser (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/db/internal-adapter.mjs:492:17)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/plugins/magic-link/index.mjs:162:37)
+    at async wrapped (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/api/index.mjs:49:11)
+    at async internalHandler (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/endpoint.mjs:38:20)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/better-auth@1.6.10_@opentelemetry+api@1.9.1_drizzle-kit@0.31.10_drizzle-orm@0.45.2_@neo_e28e8f9e5695d2fa0e66a7c86c1ccb02/node_modules/better-auth/dist/api/to-auth-endpoints.mjs:113:21)
+    at async processRequest (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/router.mjs:92:11)
+    at async handler (webpack-internal:///(rsc)/./node_modules/.pnpm/better-call@1.3.5_zod@4.4.3/node_modules/better-call/dist/router.mjs:115:16)
+    at async eval (webpack-internal:///(rsc)/./node_modules/.pnpm/@better-auth+core@1.6.10_@better-auth+utils@0.4.0_@better-fetch+fetch@1.1.21_@opentelem_4c1dd9b54d8cd18a40f092c0c0fd4d72/node_modules/@better-auth/core/dist/context/transaction.mjs:46:13)
+    at async AppRouteRouteModule.do (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+    at async AppRouteRouteModule.handle (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:45978)
+    at async responseGenerator (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:203:38)
+    at async AppRouteRouteModule.handleResponse (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:1:195304)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:265:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...all%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...all%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...all%5D%2Froute.ts&appDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Faudrey%2FRepopro%2FRepofeves%2FRepoSaaSBooking&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:317:13)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1430:9)
+    at async DevServer.renderPageComponent (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1482:24)
+    at async DevServer.renderToResponseImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1522:32)
+    at async DevServer.pipeImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1026:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/next-server.js:394:17)
+    at async DevServer.handleRequestImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:917:17)
+    at async /Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/next-dev-server.js:400:20
+    at async Span.traceAsyncFn (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/next-dev-server.js:396:24)
+    at async invokeRender (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:240:21)
+    at async handleRequest (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:437:24)
+    at async requestHandlerImpl (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/router-server.js:485:13)
+    at async Server.requestListener (/Users/audrey/Repopro/Repofeves/RepoSaaSBooking/node_modules/.pnpm/next@15.5.18_@babel+core@7.29.0_@opentelemetry+api@1.9.1_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/start-server.js:226:13)
+ GET /api/auth/magic-link/verify?token=grfhPAQtcnnZVQZDQhxLWeOAnryrBDVH&callbackURL=%2Fadmin 500 in 929ms
+2026-06-03T14:45:54.532Z WARN [Better Auth]: [better-auth] Warning: your BETTER_AUTH_SECRET should be at least 32 characters long for adequate security. Generate one with `npx auth secret` or `openssl rand -base64 32`.

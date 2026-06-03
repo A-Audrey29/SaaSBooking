@@ -1,12 +1,5 @@
-/**
- * Better Auth configuration.
- *
- * - Email/password authentication (dev testing)
- * - Drizzle adapter for session storage
- * - Extended user model with centre_id and role
- */
-
 import { betterAuth } from "better-auth";
+import { magicLink } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { InferSelectModel } from "drizzle-orm";
 import { db } from "@/server/db/client";
@@ -24,19 +17,30 @@ export const auth = betterAuth({
       verification: schema.verification,
     },
   }),
-  emailAndPassword: {
-    enabled: true, // Enable for dev testing without email
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        required: true,
+        defaultValue: "referent",
+        input: false,
+      },
+      centreId: {
+        type: "string",
+        required: false,
+        defaultValue: null,
+        input: false,
+      },
+    },
   },
-  emailVerification: {
-    sendOnSignUp: false,
-  },
-  // Email plugin disabled for dev - enable with Resend later
-  // plugins: [
-  //   resend({
-  //     apiKey: process.env.RESEND_API_KEY || "",
-  //     from: process.env.RESEND_FROM_EMAIL || "noreply@localhost",
-  //   }),
-  // ],
+  plugins: [
+    magicLink({
+      sendMagicLink: async ({ email, url }) => {
+        console.log(`[MAGIC LINK] to=${email} url=${url}`);
+      },
+      disableSignUp: true,
+    }),
+  ],
   session: {
     cookieCache: {
       enabled: true,

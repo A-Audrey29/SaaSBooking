@@ -4,7 +4,7 @@
 
 ```bash
 # Database
-DATABASE_URL=postgresql://...   # Neon dev branch
+DATABASE_URL="postgresql://neondb_owner:npg_yOSkWGhYU2T0@ep-hidden-wildflower-absuyr69-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"   # Neon dev branch
 
 # Auth
 BETTER_AUTH_SECRET=             # openssl rand -base64 32

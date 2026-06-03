@@ -4,11 +4,7 @@ config(); // fallback on .env
 
 import { neon, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { hashPassword } from "better-auth/crypto";
 import * as schema from "../server/db/schema";
-
-// DEV ONLY — never use in prod. Seed users only.
-const DEV_PASSWORD = "dev_seed_2026";
 
 if (process.env.NODE_ENV === "production") {
   throw new Error("Seed script refuses to run in production");
@@ -44,12 +40,12 @@ async function main() {
   const [centreData] = await db
     .insert(schema.centre)
     .values({
-      nom: "Centre social des Abymes",
-      adresse: "12 rue de la Paix, 97139 Les Abymes",
-      ville: "Les Abymes",
+      nom: "FEVES",
+      adresse: "Adresse dev",
+      ville: "Dev",
       timezone: "America/Guadeloupe",
       telephone: "0590 12 34 56",
-      email: "contact@cs-abymes.gp",
+      email: "contact@feves.dev",
     })
     .returning();
   console.log(`  → Centre: ${centreData.nom}`);
@@ -90,43 +86,13 @@ async function main() {
   const [providerUser] = await db
     .insert(schema.user)
     .values({
-      email: "jean.dumont@cs-abymes.gp",
+      email: "jean.dumont@provider.dev",
       name: "Jean Dumont",
       role: "provider",
-      centreId: centreData.id,
+      centreId: null,
     })
     .returning();
   console.log(`  → Provider user: ${providerUser.email}`);
-
-  // Create account records so Better Auth can authenticate these users
-  const hashedPassword = await hashPassword(DEV_PASSWORD);
-  await db.insert(schema.account).values([
-    {
-      accountId: superAdmin.email,
-      providerId: "credential",
-      userId: superAdmin.id,
-      password: hashedPassword,
-    },
-    {
-      accountId: referent1.email,
-      providerId: "credential",
-      userId: referent1.id,
-      password: hashedPassword,
-    },
-    {
-      accountId: referent2.email,
-      providerId: "credential",
-      userId: referent2.id,
-      password: hashedPassword,
-    },
-    {
-      accountId: providerUser.email,
-      providerId: "credential",
-      userId: providerUser.id,
-      password: hashedPassword,
-    },
-  ]);
-  console.log("  → Account records created");
 
   // Create project
   const [project] = await db

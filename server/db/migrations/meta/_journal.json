@@ -43,6 +43,20 @@
       "when": 1780420137251,
       "tag": "0005_dusty_ares",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780477538379,
+      "tag": "0006_amused_madripoor",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780515473485,
+      "tag": "0007_needy_zaran",
+      "breakpoints": true
     }
   ]
 }

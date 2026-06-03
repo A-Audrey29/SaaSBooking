@@ -16,6 +16,7 @@ Coût cible : 12–17 $/mois.
 - **4 rôles fixes** : `super_admin`, `project_admin`, `referent`, `provider`.
 - **Soft delete partout** (`deleted_at`). Pas de DELETE physique en V1.
 - **Pas de RLS Postgres en V1.** Isolation applicative par `centre_id` suffit.
+- **Pas de psql direct depuis shell.** `DATABASE_URL` n'est jamais dans l'env shell (chargé par Next.js uniquement). Pour vérifier DB : script tsx avec dotenv chargeant `.env.local` explicitement.
 
 ## Interdits V1 (YAGNI)
 RLS · jobs async · permissions granulaires · rate limiting custom · tests · monorepo · signup public (seed script à la place).
