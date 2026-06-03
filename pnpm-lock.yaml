@@ -9,25 +9,25 @@ importers:
   .:
     dependencies:
       '@hookform/resolvers':
-        specifier: ^3.9.1
+        specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.75.0(react@19.2.6))
       '@neondatabase/serverless':
         specifier: ^0.10.4
         version: 0.10.4
       '@radix-ui/react-dialog':
-        specifier: ^1.1.2
+        specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-dropdown-menu':
         specifier: ^2.1.2
         version: 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-label':
-        specifier: ^2.1.0
+        specifier: ^2.1.8
         version: 2.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-select':
         specifier: ^2.1.2
         version: 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-slot':
-        specifier: ^1.1.0
+        specifier: ^1.2.4
         version: 1.2.4(@types/react@19.2.14)(react@19.2.6)
       '@radix-ui/react-toast':
         specifier: ^1.2.2
@@ -63,7 +63,7 @@ importers:
         specifier: ^19.0.0
         version: 19.2.6(react@19.2.6)
       react-hook-form:
-        specifier: ^7.54.2
+        specifier: ^7.75.0
         version: 7.75.0(react@19.2.6)
       resend:
         specifier: ^4.0.1
