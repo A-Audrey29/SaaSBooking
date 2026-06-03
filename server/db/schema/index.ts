@@ -6,4 +6,5 @@ export * from "./project";
 export * from "./provider";
 export * from "./session";
 export * from "./ticket";
+export * from "./user-invitation";
 export * from "./workshop";

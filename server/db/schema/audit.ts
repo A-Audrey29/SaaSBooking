@@ -8,7 +8,7 @@ export const auditLog = pgTable(
   "audit_log",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    centreId: uuid("centre_id").notNull(), // for multi-tenant filtering
+    centreId: uuid("centre_id"), // nullable: null for super_admin actions without centre scope
     userId: uuid("user_id").notNull(), // who made the change
     action: text("action").notNull(), // create | update | delete
     entityType: text("entity_type").notNull(), // table name

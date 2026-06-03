@@ -55,6 +55,10 @@ export const auth = betterAuth({
       enabled: false,
     },
   },
+  emailAndPassword: {
+    enabled: true,
+    disableSignUp: true,
+  },
   callbacks: {
     async signIn({ user }: { user: DbUser }) {
       // Reject sign-in if user is soft-deleted

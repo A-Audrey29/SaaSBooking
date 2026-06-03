@@ -15,7 +15,7 @@ import type { ServerContext } from "@/server/context/server-context";
  *
  * Rules for centreId:
  * - For centre entities: use entityId (the centre being acted upon)
- * - For other entities: use ctx.centreId (the centre the entity belongs to)
+ * - For other entities: use ctx.centreId if set, otherwise null
  */
 export async function logAudit(
   ctx: ServerContext,
@@ -25,13 +25,7 @@ export async function logAudit(
   before: Record<string, unknown> | null,
   after: Record<string, unknown> | null
 ): Promise<void> {
-  const centreId = entityType === "centre" ? entityId : ctx.centreId;
-
-  if (!centreId) {
-    throw new Error(
-      `logAudit: centreId cannot be null for entityType=${entityType}, action=${action}`
-    );
-  }
+  const centreId = entityType === "centre" ? entityId : ctx.centreId ?? null;
 
   await db.insert(schema.auditLog).values({
     centreId,

@@ -57,6 +57,13 @@
       "when": 1780515473485,
       "tag": "0007_needy_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780524183984,
+      "tag": "0008_petite_jean_grey",
+      "breakpoints": true
     }
   ]
 }
