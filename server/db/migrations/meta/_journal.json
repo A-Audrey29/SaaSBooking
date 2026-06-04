@@ -64,6 +64,13 @@
       "when": 1780524183984,
       "tag": "0008_petite_jean_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780565527573,
+      "tag": "0009_lyrical_steel_serpent",
+      "breakpoints": true
     }
   ]
 }

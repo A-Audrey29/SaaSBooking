@@ -1,7 +1,19 @@
-export default function ProjectsPage() {
-  return (
-    <div className="px-4 md:px-8 py-6 md:py-8 max-w-[1100px] mx-auto">
-      <h1 className="text-h-2xl font-semibold tracking-tight">Projets</h1>
-    </div>
-  );
+import { isNull } from "drizzle-orm";
+import { db, schema } from "@/server/db/client";
+import { requireRole } from "@/server/context/server-context";
+import { listAllProjects } from "@/server/queries/project";
+import { ProjectsClient } from "./projects-client";
+
+export default async function ProjectsPage() {
+  await requireRole("super_admin");
+
+  const [projects, centres] = await Promise.all([
+    listAllProjects(),
+    db
+      .select({ id: schema.centre.id, nom: schema.centre.nom })
+      .from(schema.centre)
+      .where(isNull(schema.centre.deletedAt)),
+  ]);
+
+  return <ProjectsClient projects={projects} centres={centres} />;
 }

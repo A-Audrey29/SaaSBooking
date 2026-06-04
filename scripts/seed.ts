@@ -232,11 +232,11 @@ async function main() {
   const [provider1] = await db
     .insert(schema.provider)
     .values({
-      centreId: centreData.id,
       nom: "Marie-Laure Cadet",
       email: "ml.cadet@example.gp",
       telephone: "0690 11 22 33",
       ville: "Pointe-à-Pitre",
+      specialite: "Psychologie clinicienne",
       bio: "Psychologue clinicienne, 12 ans d'expérience.",
     })
     .returning();
@@ -244,11 +244,11 @@ async function main() {
   const [provider2] = await db
     .insert(schema.provider)
     .values({
-      centreId: centreData.id,
       nom: "Patrick Ramdine",
       email: "p.ramdine@example.gp",
       telephone: "0690 22 33 44",
       ville: "Le Gosier",
+      specialite: "Éducateur sportif",
       bio: "Coach sportif et éducateur sportif diplômé d'État.",
     })
     .returning();

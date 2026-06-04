@@ -3,30 +3,26 @@
  */
 
 import { pgTable, uuid, timestamp, text, index, unique } from "drizzle-orm/pg-core";
-import { centre } from "./centre";
 import { project } from "./project";
 
 /**
- * Provider - external service provider, assigned to a centre.
+ * Provider - external service provider.
  */
 export const provider = pgTable(
   "provider",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    centreId: uuid("centre_id")
-      .notNull()
-      .references(() => centre.id, { onDelete: "restrict" }),
     nom: text("nom").notNull(),
     email: text("email").notNull(),
     telephone: text("telephone"),
     ville: text("ville"),
+    specialite: text("specialite"),
     bio: text("bio"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete
   },
   (table) => ({
-    centreIdx: index("provider_centre_idx").on(table.centreId),
     emailIdx: index("provider_email_idx").on(table.email),
   })
 );
