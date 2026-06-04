@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Form,
@@ -48,40 +47,47 @@ import { assignProvider, removeAssignment } from "./provider-assignment.actions"
 
 interface Assignment {
   id: string;
-  role: string;
+  metierId: string;
+  metierNom: string;
   createdAt: Date;
   providerId: string;
   providerNom: string;
   providerEmail: string;
-  providerSpecialite: string | null;
 }
 
 interface AvailableProvider {
   id: string;
   nom: string;
-  specialite: string | null;
+  metierId: string | null;
+  metierNom: string | null;
+}
+
+interface Metier {
+  id: string;
+  nom: string;
 }
 
 interface Props {
   projectId: string;
   assignments: Assignment[];
   availableProviders: AvailableProvider[];
+  metiers: Metier[];
 }
 
-export function ProvidersClient({ projectId, assignments, availableProviders }: Props) {
+export function ProvidersClient({ projectId, assignments, availableProviders, metiers }: Props) {
   const [removeTargetId, setRemoveTargetId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<AssignProviderInput>({
     resolver: zodResolver(AssignProviderSchema),
-    defaultValues: { projectId, providerId: "", role: "" },
+    defaultValues: { projectId, providerId: "", metierId: "" },
   });
 
   const onSubmit = (data: AssignProviderInput) => {
     startTransition(async () => {
       const result = await assignProvider(data);
       if (result.ok) {
-        form.reset({ projectId, providerId: "", role: "" });
+        form.reset({ projectId, providerId: "", metierId: "" });
       } else {
         form.setError("root", { message: result.error });
       }
@@ -106,15 +112,14 @@ export function ProvidersClient({ projectId, assignments, availableProviders }: 
             <TableHeader>
               <TableRow>
                 <TableHead>Nom</TableHead>
-                <TableHead>Spécialité</TableHead>
-                <TableHead>Rôle</TableHead>
+                <TableHead>Métier</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {assignments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
                     Aucun prestataire affecté
                   </TableCell>
                 </TableRow>
@@ -126,11 +131,8 @@ export function ProvidersClient({ projectId, assignments, availableProviders }: 
                       <div className="text-xs text-muted-foreground">{a.providerEmail}</div>
                     </TableCell>
                     <TableCell>
-                      {a.providerSpecialite ? (
-                        <Badge variant="outline">{a.providerSpecialite}</Badge>
-                      ) : "—"}
+                      <Badge variant="outline">{a.metierNom}</Badge>
                     </TableCell>
-                    <TableCell>{a.role}</TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
@@ -170,7 +172,7 @@ export function ProvidersClient({ projectId, assignments, availableProviders }: 
                     <SelectContent>
                       {availableProviders.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.nom}{p.specialite ? ` — ${p.specialite}` : ""}
+                          {p.nom}{p.metierNom ? ` — ${p.metierNom}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -181,13 +183,24 @@ export function ProvidersClient({ projectId, assignments, availableProviders }: 
             />
             <FormField
               control={form.control}
-              name="role"
+              name="metierId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Rôle</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="ex. Animateur principal" />
-                  </FormControl>
+                  <FormLabel>Métier pour ce projet</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un métier" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {metiers.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.nom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

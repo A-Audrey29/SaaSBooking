@@ -11,9 +11,9 @@ export const CreateProviderSchema = z.object({
     (v) => (v === "" || v === null || v === undefined ? null : v),
     z.string().max(100).trim().nullable()
   ),
-  specialite: z.preprocess(
+  metierId: z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? null : v),
-    z.string().max(100).trim().nullable()
+    z.string().uuid().nullable()
   ),
   bio: z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? null : v),
@@ -33,9 +33,9 @@ export const UpdateProviderSchema = z.object({
     (v) => (v === "" || v === null || v === undefined ? null : v),
     z.string().max(100).trim().nullable()
   ),
-  specialite: z.preprocess(
+  metierId: z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? null : v),
-    z.string().max(100).trim().nullable()
+    z.string().uuid().nullable()
   ),
   bio: z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? null : v),

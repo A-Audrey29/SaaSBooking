@@ -255,7 +255,7 @@ export async function createRoleSlot(
       .insert(schema.workshopRoleSlot)
       .values({
         workshopRoleGroupId: validated.workshopRoleGroupId,
-        role: validated.role,
+        metierId: validated.metierId,
         couleur: validated.couleur ?? null,
         isOptional: validated.isOptional,
         ordre: validated.ordre,
@@ -291,7 +291,7 @@ export async function updateRoleSlot(
     await db
       .update(schema.workshopRoleSlot)
       .set({
-        role: validated.role,
+        metierId: validated.metierId,
         couleur: validated.couleur ?? null,
         isOptional: validated.isOptional,
         ordre: validated.ordre,

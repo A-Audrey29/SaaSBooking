@@ -35,6 +35,16 @@ const items: NavItem[] = [
     ),
   },
   {
+    href: "/admin/metiers",
+    label: "Métiers",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+        <path d="M12 2a4 4 0 0 1 4 4v2H8V6a4 4 0 0 1 4-4z" />
+        <path d="M3 10h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10z" />
+      </svg>
+    ),
+  },
+  {
     href: "/admin/providers",
     label: "Prestataires",
     icon: (

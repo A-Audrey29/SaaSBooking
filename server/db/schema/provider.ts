@@ -4,6 +4,7 @@
 
 import { pgTable, uuid, timestamp, text, index, unique } from "drizzle-orm/pg-core";
 import { project } from "./project";
+import { metier } from "./metier";
 
 /**
  * Provider - external service provider.
@@ -16,7 +17,7 @@ export const provider = pgTable(
     email: text("email").notNull(),
     telephone: text("telephone"),
     ville: text("ville"),
-    specialite: text("specialite"),
+    metierId: uuid("metier_id").references(() => metier.id, { onDelete: "restrict" }),
     bio: text("bio"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -40,7 +41,9 @@ export const providerAssignment = pgTable(
     projectId: uuid("project_id")
       .notNull()
       .references(() => project.id, { onDelete: "restrict" }),
-    role: text("role").notNull(), // role code
+    metierId: uuid("metier_id")
+      .notNull()
+      .references(() => metier.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete
   },
@@ -48,6 +51,6 @@ export const providerAssignment = pgTable(
     providerIdx: index("provider_assignment_provider_idx").on(table.providerId),
     projectIdx: index("provider_assignment_project_idx").on(table.projectId),
     uniquePerProject: unique("provider_assignment_unique_per_project")
-      .on(table.providerId, table.projectId, table.role),
+      .on(table.providerId, table.projectId, table.metierId),
   })
 );

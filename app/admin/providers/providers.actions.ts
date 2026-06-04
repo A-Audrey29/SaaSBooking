@@ -29,7 +29,7 @@ export async function createProvider(
           email: validated.email,
           telephone: validated.telephone ?? null,
           ville: validated.ville ?? null,
-          specialite: validated.specialite ?? null,
+          metierId: validated.metierId ?? null,
           bio: validated.bio ?? null,
         })
         .returning();
@@ -71,7 +71,7 @@ export async function updateProvider(
           email: validated.email,
           telephone: validated.telephone ?? null,
           ville: validated.ville ?? null,
-          specialite: validated.specialite ?? null,
+          metierId: validated.metierId ?? null,
           bio: validated.bio ?? null,
           updatedAt: new Date(),
         })

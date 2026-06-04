@@ -5,6 +5,7 @@ import {
   listProjectAssignments,
   listAvailableProviders,
 } from "@/server/queries/provider-assignment";
+import { listAllMetiers } from "@/server/queries/metier";
 import { ProvidersClient } from "./providers-client";
 
 interface Props {
@@ -17,9 +18,10 @@ export default async function ProjectProvidersPage({ params }: Props) {
   const project = await getProjectById(id);
   if (!project) notFound();
 
-  const [assignments, availableProviders] = await Promise.all([
+  const [assignments, availableProviders, metiers] = await Promise.all([
     listProjectAssignments(id),
     listAvailableProviders(),
+    listAllMetiers(),
   ]);
 
   return (
@@ -27,6 +29,7 @@ export default async function ProjectProvidersPage({ params }: Props) {
       projectId={id}
       assignments={assignments}
       availableProviders={availableProviders}
+      metiers={metiers}
     />
   );
 }

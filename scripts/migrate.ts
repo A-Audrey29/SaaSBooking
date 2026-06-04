@@ -8,18 +8,19 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 config(); // fallback on .env
 
-import { migrate } from "drizzle-orm/neon-http/migrator";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { migrate } from "drizzle-orm/neon-serverless/migrator";
 
 async function main() {
-  const sql = neon(process.env.DATABASE_URL!);
-  const db = drizzle(sql);
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+  const db = drizzle(pool);
 
   console.log("→ Running migrations...");
 
   await migrate(db, { migrationsFolder: "./server/db/migrations" });
 
+  await pool.end();
   console.log("✓ Migrations completed");
 }
 

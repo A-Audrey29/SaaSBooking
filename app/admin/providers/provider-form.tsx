@@ -15,6 +15,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CreateProviderSchema,
   UpdateProviderSchema,
   type CreateProviderInput,
@@ -22,17 +29,23 @@ import {
 } from "@/server/validations/provider";
 import { createProvider, updateProvider } from "./providers.actions";
 
+interface Metier {
+  id: string;
+  nom: string;
+}
+
 interface ProviderRow {
   id: string;
   nom: string;
   email: string;
   telephone: string | null;
   ville: string | null;
-  specialite: string | null;
+  metierId: string | null;
   bio: string | null;
 }
 
 interface SharedProps {
+  metiers: Metier[];
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -49,7 +62,7 @@ interface EditProps extends SharedProps {
 
 export type ProviderFormProps = CreateProps | EditProps;
 
-function CreateProviderForm({ onSuccess, onCancel }: SharedProps) {
+function CreateProviderForm({ metiers, onSuccess, onCancel }: SharedProps) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<CreateProviderInput>({
@@ -59,7 +72,7 @@ function CreateProviderForm({ onSuccess, onCancel }: SharedProps) {
       email: "",
       telephone: null,
       ville: null,
-      specialite: null,
+      metierId: null,
       bio: null,
     },
   });
@@ -106,17 +119,28 @@ function CreateProviderForm({ onSuccess, onCancel }: SharedProps) {
         />
         <FormField
           control={form.control}
-          name="specialite"
+          name="metierId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Spécialité</FormLabel>
-              <FormControl>
-                <Input
-                  value={field.value ?? ""}
-                  onChange={(e) => field.onChange(e.target.value || null)}
-                  placeholder="ex. Psychomotricité"
-                />
-              </FormControl>
+              <FormLabel>Métier</FormLabel>
+              <Select
+                onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+                value={field.value ?? "__none__"}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un métier (optionnel)" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="__none__">— Aucun —</SelectItem>
+                  {metiers.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -192,7 +216,7 @@ function CreateProviderForm({ onSuccess, onCancel }: SharedProps) {
   );
 }
 
-function EditProviderForm({ provider, onSuccess, onCancel }: EditProps) {
+function EditProviderForm({ provider, metiers, onSuccess, onCancel }: EditProps) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<UpdateProviderInput>({
@@ -203,7 +227,7 @@ function EditProviderForm({ provider, onSuccess, onCancel }: EditProps) {
       email: provider.email,
       telephone: provider.telephone ?? null,
       ville: provider.ville ?? null,
-      specialite: provider.specialite ?? null,
+      metierId: provider.metierId ?? null,
       bio: provider.bio ?? null,
     },
   });
@@ -250,16 +274,28 @@ function EditProviderForm({ provider, onSuccess, onCancel }: EditProps) {
         />
         <FormField
           control={form.control}
-          name="specialite"
+          name="metierId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Spécialité</FormLabel>
-              <FormControl>
-                <Input
-                  value={field.value ?? ""}
-                  onChange={(e) => field.onChange(e.target.value || null)}
-                />
-              </FormControl>
+              <FormLabel>Métier</FormLabel>
+              <Select
+                onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+                value={field.value ?? "__none__"}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un métier (optionnel)" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="__none__">— Aucun —</SelectItem>
+                  {metiers.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

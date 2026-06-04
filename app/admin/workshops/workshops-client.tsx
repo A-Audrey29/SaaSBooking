@@ -32,7 +32,8 @@ import {
 
 type RoleSlot = {
   id: string;
-  role: string;
+  metierId: string;
+  metier: { id: string; nom: string };
   couleur: string | null;
   isOptional: boolean;
   ordre: number;
@@ -56,10 +57,12 @@ type WorkshopType = {
 };
 
 type Centre = { id: string; nom: string };
+type Metier = { id: string; nom: string };
 
 interface WorkshopsClientProps {
   workshopTypes: WorkshopType[];
   centres: Centre[];
+  metiers: Metier[];
 }
 
 // ─── Sheet / Delete state ────────────────────────────────────────────────────
@@ -77,7 +80,7 @@ type DeleteTarget =
   | { kind: "group"; id: string; label: string }
   | { kind: "slot"; id: string; label: string };
 
-export function WorkshopsClient({ workshopTypes, centres }: WorkshopsClientProps) {
+export function WorkshopsClient({ workshopTypes, centres, metiers }: WorkshopsClientProps) {
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null);
@@ -235,7 +238,7 @@ export function WorkshopsClient({ workshopTypes, centres }: WorkshopsClientProps
                                   style={{ backgroundColor: s.couleur }}
                                 />
                               )}
-                              <span className="text-sm">{s.role}</span>
+                              <span className="text-sm">{s.metier.nom}</span>
                               {s.isOptional && (
                                 <Badge variant="secondary" className="text-xs">
                                   Optionnel
@@ -260,7 +263,7 @@ export function WorkshopsClient({ workshopTypes, centres }: WorkshopsClientProps
                                 variant="ghost"
                                 size="sm"
                                 onClick={() =>
-                                  setDeleteTarget({ kind: "slot", id: s.id, label: s.role })
+                                  setDeleteTarget({ kind: "slot", id: s.id, label: s.metier.nom })
                                 }
                               >
                                 Supprimer
@@ -349,11 +352,12 @@ export function WorkshopsClient({ workshopTypes, centres }: WorkshopsClientProps
             {(sheetMode?.kind === "create-slot" || sheetMode?.kind === "edit-slot") && (
               <RoleSlotForm
                 workshopRoleGroupId={sheetMode.workshopRoleGroupId}
+                metiers={metiers}
                 defaultValues={
                   sheetMode.kind === "edit-slot"
                     ? {
                         id: sheetMode.slot.id,
-                        role: sheetMode.slot.role,
+                        metierId: sheetMode.slot.metierId,
                         couleur: sheetMode.slot.couleur ?? undefined,
                         isOptional: sheetMode.slot.isOptional,
                         ordre: sheetMode.slot.ordre,

@@ -71,6 +71,13 @@
       "when": 1780565527573,
       "tag": "0009_lyrical_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780600000000,
+      "tag": "0010_metier",
+      "breakpoints": true
     }
   ]
 }

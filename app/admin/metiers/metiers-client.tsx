@@ -26,68 +26,59 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ProviderForm } from "./provider-form";
-import { softDeleteProvider } from "./providers.actions";
+import { MetierForm } from "./metier-form";
+import { softDeleteMetier } from "./metiers.actions";
 
 interface Metier {
   id: string;
   nom: string;
-}
-
-interface Provider {
-  id: string;
-  nom: string;
-  email: string;
-  telephone: string | null;
-  ville: string | null;
-  metierId: string | null;
-  metierNom: string | null;
-  bio: string | null;
   createdAt: Date;
 }
 
-interface ProvidersClientProps {
-  providers: Provider[];
+interface MetiersClientProps {
   metiers: Metier[];
 }
 
-export function ProvidersClient({ providers, metiers }: ProvidersClientProps) {
+export function MetiersClient({ metiers }: MetiersClientProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [selectedMetier, setSelectedMetier] = useState<Metier | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Metier | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleCreate = () => {
-    setSelectedProvider(null);
+    setSelectedMetier(null);
     setSheetOpen(true);
   };
 
-  const handleEdit = (provider: Provider) => {
-    setSelectedProvider(provider);
+  const handleEdit = (m: Metier) => {
+    setSelectedMetier(m);
     setSheetOpen(true);
   };
 
   const handleSheetClose = () => {
     setSheetOpen(false);
-    setSelectedProvider(null);
+    setSelectedMetier(null);
   };
 
   const handleDeleteConfirm = () => {
-    if (!deleteTargetId) return;
+    if (!deleteTarget) return;
+    setDeleteError(null);
     startTransition(async () => {
-      const result = await softDeleteProvider({ id: deleteTargetId });
-      if (!result.ok) {
-        console.error("Erreur suppression:", result.error);
+      const result = await softDeleteMetier({ id: deleteTarget.id });
+      if (result.ok) {
+        setDeleteTarget(null);
+      } else {
+        setDeleteError(result.error);
       }
-      setDeleteTargetId(null);
     });
   };
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 max-w-[1100px] mx-auto">
+    <div className="px-4 md:px-8 py-6 md:py-8 max-w-[800px] mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Prestataires</h1>
-        <Button onClick={handleCreate}>+ Nouveau prestataire</Button>
+        <h1 className="text-2xl font-semibold tracking-tight">Métiers</h1>
+        <Button onClick={handleCreate}>+ Nouveau métier</Button>
       </div>
 
       <div className="border rounded-lg">
@@ -95,40 +86,31 @@ export function ProvidersClient({ providers, metiers }: ProvidersClientProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nom</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Métier</TableHead>
-              <TableHead>Ville</TableHead>
-              <TableHead>Téléphone</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {providers.length === 0 ? (
+            {metiers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  Aucun prestataire trouvé
+                <TableCell colSpan={2} className="text-center text-muted-foreground">
+                  Aucun métier défini
                 </TableCell>
               </TableRow>
             ) : (
-              providers.map((provider) => (
-                <TableRow key={provider.id}>
-                  <TableCell className="font-medium">{provider.nom}</TableCell>
-                  <TableCell>{provider.email}</TableCell>
-                  <TableCell>{provider.metierNom ?? "—"}</TableCell>
-                  <TableCell>{provider.ville ?? "—"}</TableCell>
-                  <TableCell>{provider.telephone ?? "—"}</TableCell>
+              metiers.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell className="font-medium">{m.nom}</TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(provider)}
-                    >
-                      Modifier
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(m)}>
+                      Renommer
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setDeleteTargetId(provider.id)}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setDeleteTarget(m);
+                      }}
                       disabled={isPending}
                     >
                       Supprimer
@@ -142,25 +124,23 @@ export function ProvidersClient({ providers, metiers }: ProvidersClientProps) {
       </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="overflow-y-auto">
+        <SheetContent>
           <SheetHeader>
             <SheetTitle>
-              {selectedProvider ? "Modifier le prestataire" : "Nouveau prestataire"}
+              {selectedMetier ? "Renommer le métier" : "Nouveau métier"}
             </SheetTitle>
           </SheetHeader>
           <div className="mt-6">
-            {selectedProvider ? (
-              <ProviderForm
+            {selectedMetier ? (
+              <MetierForm
                 mode="edit"
-                provider={selectedProvider}
-                metiers={metiers}
+                metier={selectedMetier}
                 onSuccess={handleSheetClose}
                 onCancel={handleSheetClose}
               />
             ) : (
-              <ProviderForm
+              <MetierForm
                 mode="create"
-                metiers={metiers}
                 onSuccess={handleSheetClose}
                 onCancel={handleSheetClose}
               />
@@ -170,18 +150,24 @@ export function ProvidersClient({ providers, metiers }: ProvidersClientProps) {
       </Sheet>
 
       <AlertDialog
-        open={deleteTargetId !== null}
+        open={deleteTarget !== null}
         onOpenChange={(open) => {
-          if (!open) setDeleteTargetId(null);
+          if (!open) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce prestataire ?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer ce métier ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Le prestataire sera désactivé. Cette action est réversible par un administrateur.
+              Le métier <strong>{deleteTarget?.nom}</strong> sera désactivé. Impossible si déjà utilisé dans un atelier ou par un prestataire.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deleteError && (
+            <p className="text-sm text-destructive px-1">{deleteError}</p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Annuler</AlertDialogCancel>
             <AlertDialogAction
@@ -189,7 +175,7 @@ export function ProvidersClient({ providers, metiers }: ProvidersClientProps) {
               disabled={isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Supprimer
+              {isPending ? "Suppression…" : "Supprimer"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

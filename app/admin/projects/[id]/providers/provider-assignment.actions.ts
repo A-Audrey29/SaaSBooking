@@ -25,14 +25,14 @@ export async function assignProvider(
         .values({
           projectId: validated.projectId,
           providerId: validated.providerId,
-          role: validated.role,
+          metierId: validated.metierId,
         })
         .returning();
 
       await logAudit(ctx, "create", "provider_assignment", created.id, null, {
         projectId: created.projectId,
         providerId: created.providerId,
-        role: created.role,
+        metierId: created.metierId,
       });
     });
 
@@ -73,7 +73,7 @@ export async function removeAssignment(
       await logAudit(ctx, "soft_delete", "provider_assignment", validated.id, {
         projectId: before.projectId,
         providerId: before.providerId,
-        role: before.role,
+        metierId: before.metierId,
       }, null);
     });
 

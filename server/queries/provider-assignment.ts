@@ -5,15 +5,16 @@ export async function listProjectAssignments(projectId: string) {
   return db
     .select({
       id: schema.providerAssignment.id,
-      role: schema.providerAssignment.role,
+      metierId: schema.providerAssignment.metierId,
+      metierNom: schema.metier.nom,
       createdAt: schema.providerAssignment.createdAt,
       providerId: schema.provider.id,
       providerNom: schema.provider.nom,
       providerEmail: schema.provider.email,
-      providerSpecialite: schema.provider.specialite,
     })
     .from(schema.providerAssignment)
     .innerJoin(schema.provider, eq(schema.providerAssignment.providerId, schema.provider.id))
+    .innerJoin(schema.metier, eq(schema.providerAssignment.metierId, schema.metier.id))
     .where(
       and(
         eq(schema.providerAssignment.projectId, projectId),
@@ -28,9 +29,11 @@ export async function listAvailableProviders() {
     .select({
       id: schema.provider.id,
       nom: schema.provider.nom,
-      specialite: schema.provider.specialite,
+      metierId: schema.provider.metierId,
+      metierNom: schema.metier.nom,
     })
     .from(schema.provider)
+    .leftJoin(schema.metier, eq(schema.provider.metierId, schema.metier.id))
     .where(isNull(schema.provider.deletedAt))
     .orderBy(schema.provider.nom);
 }

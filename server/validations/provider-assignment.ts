@@ -3,7 +3,7 @@ import { z } from "zod";
 export const AssignProviderSchema = z.object({
   projectId: z.string().uuid(),
   providerId: z.string().uuid(),
-  role: z.string().min(1).max(200).trim(),
+  metierId: z.string().uuid(),
 });
 
 export const RemoveAssignmentSchema = z.object({

@@ -30,6 +30,7 @@ async function main() {
   await db.delete(schema.workshopRoleGroup);
   await db.delete(schema.workshopType);
   await db.delete(schema.project);
+  await db.delete(schema.metier);
   await db.delete(schema.centre);
   await db.delete(schema.account);
   await db.delete(schema.session);
@@ -108,6 +109,15 @@ async function main() {
     .returning();
   console.log(`  → Project: ${project.nom}`);
 
+  // Create metiers (reference table)
+  const metierNames = ["Psychologue", "Éducateur", "Animateur", "Coach sportif", "Éducateur sportif"];
+  const metierRows = await db
+    .insert(schema.metier)
+    .values(metierNames.map((nom) => ({ nom })))
+    .returning();
+  const metierByNom = Object.fromEntries(metierRows.map((m) => [m.nom, m.id]));
+  console.log(`  → Métiers: ${metierNames.join(", ")}`);
+
   // Create workshop types (with centre_id)
   const [type1] = await db
     .insert(schema.workshopType)
@@ -153,21 +163,21 @@ async function main() {
   await db.insert(schema.workshopRoleSlot).values([
     {
       workshopRoleGroupId: group1.id,
-      role: "Psychologue",
+      metierId: metierByNom["Psychologue"],
       couleur: "#1f3a5f",
       isOptional: false,
       ordre: 0,
     },
     {
       workshopRoleGroupId: group1.id,
-      role: "Éducateur",
+      metierId: metierByNom["Éducateur"],
       couleur: "#2f5d3a",
       isOptional: false,
       ordre: 1,
     },
     {
       workshopRoleGroupId: group1.id,
-      role: "Animateur",
+      metierId: metierByNom["Animateur"],
       couleur: "#b78a2a",
       isOptional: false,
       ordre: 2,
@@ -186,14 +196,14 @@ async function main() {
   await db.insert(schema.workshopRoleSlot).values([
     {
       workshopRoleGroupId: group2.id,
-      role: "Coach sportif",
+      metierId: metierByNom["Coach sportif"],
       couleur: "#a64b1f",
       isOptional: false,
       ordre: 0,
     },
     {
       workshopRoleGroupId: group2.id,
-      role: "Éducateur sportif",
+      metierId: metierByNom["Éducateur sportif"],
       couleur: "#7a1f3a",
       isOptional: false,
       ordre: 1,
@@ -236,7 +246,7 @@ async function main() {
       email: "ml.cadet@example.gp",
       telephone: "0690 11 22 33",
       ville: "Pointe-à-Pitre",
-      specialite: "Psychologie clinicienne",
+      metierId: metierByNom["Psychologue"],
       bio: "Psychologue clinicienne, 12 ans d'expérience.",
     })
     .returning();
@@ -248,7 +258,7 @@ async function main() {
       email: "p.ramdine@example.gp",
       telephone: "0690 22 33 44",
       ville: "Le Gosier",
-      specialite: "Éducateur sportif",
+      metierId: metierByNom["Éducateur sportif"],
       bio: "Coach sportif et éducateur sportif diplômé d'État.",
     })
     .returning();

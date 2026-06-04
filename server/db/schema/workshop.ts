@@ -6,6 +6,7 @@ import { pgTable, uuid, timestamp, text, integer, index, unique, boolean } from 
 import { relations } from "drizzle-orm";
 import { centre } from "./centre";
 import { project } from "./project";
+import { metier } from "./metier";
 
 /**
  * Workshop types - reference enum (11 fixed types).
@@ -86,7 +87,9 @@ export const workshopRoleSlot = pgTable(
     workshopRoleGroupId: uuid("workshop_role_group_id")
       .notNull()
       .references(() => workshopRoleGroup.id, { onDelete: "cascade" }),
-    role: text("role").notNull(), // e.g. "Psychologue", "Coach sportif"
+    metierId: uuid("metier_id")
+      .notNull()
+      .references(() => metier.id, { onDelete: "restrict" }),
     couleur: text("couleur"), // hex color, nullable
     isOptional: boolean("is_optional").notNull().default(false), // pre-unchecked in UI
     ordre: integer("ordre").notNull().default(0),
@@ -121,5 +124,9 @@ export const workshopRoleSlotRelations = relations(workshopRoleSlot, ({ one }) =
   workshopRoleGroup: one(workshopRoleGroup, {
     fields: [workshopRoleSlot.workshopRoleGroupId],
     references: [workshopRoleGroup.id],
+  }),
+  metier: one(metier, {
+    fields: [workshopRoleSlot.metierId],
+    references: [metier.id],
   }),
 }));

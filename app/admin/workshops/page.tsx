@@ -2,6 +2,7 @@ import { db, schema } from "@/server/db/client";
 import { requireRole } from "@/server/context/server-context";
 import { isNull } from "drizzle-orm";
 import { WorkshopsClient } from "./workshops-client";
+import { listAllMetiers } from "@/server/queries/metier";
 
 export default async function WorkshopsPage() {
   await requireRole("super_admin");
@@ -16,6 +17,9 @@ export default async function WorkshopsPage() {
           workshopRoleSlots: {
             where: isNull(schema.workshopRoleSlot.deletedAt),
             orderBy: (s, { asc }) => [asc(s.ordre)],
+            with: {
+              metier: { columns: { id: true, nom: true } },
+            },
           },
         },
         orderBy: (g, { asc }) => [asc(g.ordre)],
@@ -24,10 +28,13 @@ export default async function WorkshopsPage() {
     orderBy: (t, { asc }) => [asc(t.code)],
   });
 
-  const centres = await db
-    .select({ id: schema.centre.id, nom: schema.centre.nom })
-    .from(schema.centre)
-    .where(isNull(schema.centre.deletedAt));
+  const [centres, metiers] = await Promise.all([
+    db
+      .select({ id: schema.centre.id, nom: schema.centre.nom })
+      .from(schema.centre)
+      .where(isNull(schema.centre.deletedAt)),
+    listAllMetiers(),
+  ]);
 
-  return <WorkshopsClient workshopTypes={workshopTypes} centres={centres} />;
+  return <WorkshopsClient workshopTypes={workshopTypes} centres={centres} metiers={metiers} />;
 }

@@ -15,6 +15,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CreateRoleSlotSchema,
   UpdateRoleSlotSchema,
   type CreateRoleSlotInput,
@@ -22,11 +29,17 @@ import {
 } from "@/server/validations/workshop";
 import { createRoleSlot, updateRoleSlot } from "./workshops.actions";
 
+interface Metier {
+  id: string;
+  nom: string;
+}
+
 interface RoleSlotFormProps {
   workshopRoleGroupId: string;
+  metiers: Metier[];
   defaultValues?: {
     id?: string;
-    role?: string;
+    metierId?: string;
     couleur?: string;
     isOptional?: boolean;
     ordre?: number;
@@ -39,6 +52,7 @@ type FormValues = CreateRoleSlotInput & { id?: string };
 
 export function RoleSlotForm({
   workshopRoleGroupId,
+  metiers,
   defaultValues,
   onSuccess,
   onCancel,
@@ -51,7 +65,7 @@ export function RoleSlotForm({
     defaultValues: {
       id: defaultValues?.id,
       workshopRoleGroupId,
-      role: defaultValues?.role ?? "",
+      metierId: defaultValues?.metierId ?? "",
       couleur: defaultValues?.couleur ?? "",
       isOptional: defaultValues?.isOptional ?? false,
       ordre: defaultValues?.ordre ?? 0,
@@ -81,13 +95,24 @@ export function RoleSlotForm({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
-          name="role"
+          name="metierId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Rôle</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Psychologue" />
-              </FormControl>
+              <FormLabel>Métier</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un métier" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {metiers.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
