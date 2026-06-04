@@ -309,7 +309,57 @@ Note : on a 4 valeurs en DB mais conceptuellement le statut "blocked"
 (au moins un refused + un empty) est utile côté UI. Choix V1 : rester sur
 `planned` en DB, dériver `blocked` à l'affichage par règle UI.
 
-### 5.3 Annulation d'occurrence (cascade)
+### 5.3 Flux assignation prestataire — vision V1 complète
+
+#### Principe
+
+Le lien prestataire → slot ne passe **pas** par `provider_assignment` (projet).
+Il passe par le **métier** : `ticket_slot.provider_role` = nom du métier requis,
+`provider.metier_id` = métier du prestataire.
+
+Le référent ne voit que les prestataires qui :
+1. Ont le **bon métier** (correspond au slot)
+2. Sont **disponibles** sur le créneau de l'occurrence
+
+#### Table `provider_availability` (À CRÉER en migration 0011)
+
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `provider_id` | uuid FK → provider, cascade | |
+| `start_at` | timestamptz NOT NULL | UTC |
+| `end_at` | timestamptz NOT NULL | UTC |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | soft delete |
+
+Sémantique : le prestataire est disponible sur l'intervalle `[start_at, end_at]`.
+Un prestataire peut avoir N disponibilités (créneaux non chevauchants recommandés, non contraints en V1).
+
+#### Interface prestataire `/pro/availability`
+
+- Le prestataire déclare ses créneaux de disponibilité
+- UI : vue calendrier ou liste, ajout/suppression de créneaux
+- Server action : `createAvailability`, `deleteAvailability`
+
+#### Requête `getProvidersForSlot(slotId, centreId)` — version V1 complète
+
+Filtre sur :
+- `provider.metier_id = workshop_role_slot.metier_id` (bon métier pour ce slot)
+- `provider_availability` couvre `occurrence.start_at` → `occurrence.end_at`
+  (`availability.start_at <= occurrence.start_at AND availability.end_at >= occurrence.end_at`)
+- `provider.deleted_at IS NULL`
+- `provider_availability.deleted_at IS NULL`
+
+> **Note V1** : la version actuelle de `getProvidersForSlot` (S9) filtre par
+> `provider_assignment.project_id`. Elle sera remplacée par le filtre métier + disponibilité
+> une fois la table `provider_availability` créée (S10).
+
+#### Vue calendrier référent `/app/calendar`
+
+- Affiche toutes les occurrences du centre sur un agenda mensuel/hebdomadaire
+- Clic sur une occurrence → lien vers `/app/sessions/[id]`
+- Indicateur visuel statut : planifiée / bloquée / confirmée / réalisée
+
+### 5.4 Annulation d'occurrence (cascade)
 
 Server action `cancelOccurrence(occurrenceId, raison)` :
 - En 1 transaction :
