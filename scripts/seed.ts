@@ -15,6 +15,23 @@ neonConfig.fetchConnectionCache = true;
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql);
 
+const DEV_PASSWORD = "dev_seed_2026";
+
+async function createCredentialAccount(db: ReturnType<typeof drizzle>, userId: string, email: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { hashPassword } = await import("../node_modules/better-auth/dist/crypto/index.mjs") as any;
+  const hashed = await hashPassword(DEV_PASSWORD);
+  await db.insert(schema.account).values({
+    id: crypto.randomUUID(),
+    accountId: email,
+    providerId: "credential",
+    userId,
+    password: hashed,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+}
+
 async function main() {
   console.log("→ Seeding database...");
 
@@ -61,6 +78,7 @@ async function main() {
       centreId: null,
     })
     .returning();
+  await createCredentialAccount(db, superAdmin.id, superAdmin.email);
   console.log(`  → Super Admin: ${superAdmin.email}`);
 
   const [referent1] = await db
@@ -82,6 +100,8 @@ async function main() {
       centreId: centreData.id,
     })
     .returning();
+  await createCredentialAccount(db, referent1.id, referent1.email);
+  await createCredentialAccount(db, referent2.id, referent2.email);
   console.log(`  → Referents: ${referent1.email}, ${referent2.email}`);
 
   const [providerUser] = await db
@@ -93,6 +113,7 @@ async function main() {
       centreId: null,
     })
     .returning();
+  await createCredentialAccount(db, providerUser.id, providerUser.email);
   console.log(`  → Provider user: ${providerUser.email}`);
 
   // Create project

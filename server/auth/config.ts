@@ -1,5 +1,4 @@
 import { betterAuth } from "better-auth";
-import { magicLink } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { InferSelectModel } from "drizzle-orm";
 import { db } from "@/server/db/client";
@@ -33,14 +32,7 @@ export const auth = betterAuth({
       },
     },
   },
-  plugins: [
-    magicLink({
-      sendMagicLink: async ({ email, url }) => {
-        console.log(`[MAGIC LINK] to=${email} url=${url}`);
-      },
-      disableSignUp: true,
-    }),
-  ],
+  plugins: [],
   session: {
     cookieCache: {
       enabled: true,

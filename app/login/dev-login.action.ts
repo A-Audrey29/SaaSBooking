@@ -1,5 +1,5 @@
-import "server-only";
 "use server";
+import "server-only";
 
 import { auth } from "@/server/auth/config";
 import { cookies } from "next/headers";
@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 const ROLE_REDIRECTS: Record<string, string> = {
   "referent1@cs-abymes.gp": "/app",
   "admin@saasbooking.dev": "/admin",
-  "jean.dumont@cs-abymes.gp": "/pro",
+  "jean.dumont@provider.dev": "/pro",
 };
 
 export async function devLogin(email: string): Promise<never> {
