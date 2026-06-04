@@ -15,12 +15,16 @@ Schema:
 | ID | Status | Domaine | Résumé |
 |----|--------|---------|--------|
 | BLK-001 | ✓ resolved | DB/migrations | Migrations SQL non générées |
-| BLK-002 | open | Auth | Login email+password au lieu magic link |
+| BLK-002 | ✓ resolved | Auth | Login email+password au lieu magic link |
 | BLK-003 | open | Build/ESLint | @eslint/eslintrc manquant |
 | BLK-004 | open | DB/Neon | fetchConnectionCache déprécié |
 | BLK-005 | open | Auth/secrets | BETTER_AUTH_SECRET trop court |
 | BLK-006 | open | Deploy/Render | Env vars à configurer |
 | BLK-007 | open | DB/prod | Production Neon non tracée |
+| BLK-008 | open | Build/Next | /404 : Html importé hors _document |
+| BLK-009 | ✓ resolved | Auth | Chaîne 5 bugs auth — magic link 500 |
+| BLK-010 | open | Build/Tailwind | tailwind.config.ts require() dans ESM |
+| BLK-011 | open | Security/prod | dev-login route dans le build |
 
 ---
 
@@ -39,8 +43,9 @@ Schema:
 - **Date**: 2026-05-20
 - **Friction**: [app/login/page.tsx](app/login/page.tsx) implémente un form email+password. Better Auth config a le plugin Resend commenté. Le flow magic link n'est pas câblé.
 - **Root Cause**: Form temporaire pour dev local, jamais converti
-- **Solution**: Réécrire login page avec form email seul → appel `authClient.signIn.magicLink()`. Décommenter plugin Resend dans [server/auth/config.ts](server/auth/config.ts).
-- **Status**: open
+- **Solution**: Réécrire login page avec form email seul → appel `authClient.signIn.magicLink()`. Transport = console.log en dev (pas Resend).
+- **Resolved**: 2026-06-03 — Login page réduite à champ email seul. Magic link fonctionnel en dev via console.log.
+- **Status**: resolved
 
 ### BLK-003: ESLint — @eslint/eslintrc package manquant
 - **Date**: 2026-05-21
@@ -69,6 +74,46 @@ Schema:
 - **Root Cause**: Aucun déploiement Render configuré à ce jour
 - **Solution**: Avant premier push sur branch Render → configurer toutes les env vars dans dashboard Render
 - **Status**: open
+
+### BLK-008: Build rouge — /404 : Html importé hors _document
+- **Date**: 2026-06-03
+- **Friction**: `next build` rouge sur /404 — composant `Html` importé en dehors de `_document`.
+- **Root Cause**: À diagnostiquer.
+- **Solution**: Identifier le fichier incriminé, corriger l'import.
+- **Status**: open
+- **Priorité**: HAUTE — bloque déploiement prod
+
+### BLK-009: Chaîne 5 bugs auth — magic link 500
+- **Date**: 2026-06-03
+- **Friction**: Page magic link callback crashait en 500. Chaîne de 5 bugs liés.
+- **Root Cause (chaîne)**:
+  1. `verification/session/account.id` : `uuid` → `text` (Better Auth attend text)
+  2. `user.emailVerified` : `timestamp` → `boolean` (mismatch Better Auth qui envoie `true` booléen)
+  3. Timestamps auth : `mode: "date"` requis sur toutes les colonnes timestamp
+  4. `db client` : schéma passé à `drizzle()` pour activer les modes de colonnes
+  5. `additionalFields` manquant dans auth config : `role` + `centreId` non exposés dans session
+- **Solution appliquée**:
+  - Migration 0007 : `ALTER TABLE "user" ALTER COLUMN "emailVerified" SET DATA TYPE boolean USING ...`
+  - `server/auth/config.ts` : ajout `user.additionalFields` (role + centreId)
+  - `server/db/schema/auth.ts` : emailVerified → boolean, timestamps → mode:"date"
+- **Resolved**: 2026-06-03 — Magic link fonctionnel, /admin accessible.
+- **Status**: resolved
+
+### BLK-010: tailwind.config.ts — require() dans contexte ESM
+- **Date**: 2026-06-03
+- **Friction**: `ReferenceError` en dev — `tailwind.config.ts` utilise `require()` dans un module ESM.
+- **Root Cause**: Config tailwind écrite en CommonJS syntax, projet en ESM.
+- **Solution**: Convertir `require()` en `import` dans `tailwind.config.ts`.
+- **Status**: open
+- **Priorité**: BASSE — non bloquant dev
+
+### BLK-011: dev-login route présente dans le build
+- **Date**: 2026-06-03
+- **Friction**: Route `/dev-login` détectée dans le build — ne doit pas exister en prod.
+- **Root Cause**: Route de dev jamais supprimée.
+- **Solution**: Supprimer le fichier de route avant déploiement prod.
+- **Status**: open
+- **Priorité**: HAUTE — sécurité prod (voir BDR-007)
 
 ### BLK-007: Production Neon dans un état non tracé
 - **Date**: 2026-05-21

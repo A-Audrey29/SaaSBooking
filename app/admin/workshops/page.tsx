@@ -1,7 +1,33 @@
-export default function WorkshopsPage() {
-  return (
-    <div className="px-4 md:px-8 py-6 md:py-8 max-w-[1100px] mx-auto">
-      <h1 className="text-h-2xl font-semibold tracking-tight">Ateliers</h1>
-    </div>
-  );
+import { db, schema } from "@/server/db/client";
+import { requireRole } from "@/server/context/server-context";
+import { isNull } from "drizzle-orm";
+import { WorkshopsClient } from "./workshops-client";
+
+export default async function WorkshopsPage() {
+  await requireRole("super_admin");
+
+  const workshopTypes = await db.query.workshopType.findMany({
+    where: isNull(schema.workshopType.deletedAt),
+    with: {
+      centre: { columns: { id: true, nom: true } },
+      workshopRoleGroups: {
+        where: isNull(schema.workshopRoleGroup.deletedAt),
+        with: {
+          workshopRoleSlots: {
+            where: isNull(schema.workshopRoleSlot.deletedAt),
+            orderBy: (s, { asc }) => [asc(s.ordre)],
+          },
+        },
+        orderBy: (g, { asc }) => [asc(g.ordre)],
+      },
+    },
+    orderBy: (t, { asc }) => [asc(t.code)],
+  });
+
+  const centres = await db
+    .select({ id: schema.centre.id, nom: schema.centre.nom })
+    .from(schema.centre)
+    .where(isNull(schema.centre.deletedAt));
+
+  return <WorkshopsClient workshopTypes={workshopTypes} centres={centres} />;
 }

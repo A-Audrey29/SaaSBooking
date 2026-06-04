@@ -19,8 +19,10 @@ Schema:
 | BDR-002 | 2026-05-11 | DB/ORM | Neon + Drizzle |
 | BDR-003 | 2026-05-11 | Hosting | Render (pas Vercel) |
 | BDR-004 | 2026-05-11 | Multi-tenant | Isolation applicative centre_id (pas RLS) |
-| BDR-005 | 2026-05-11 | Auth flow | Magic link uniquement V1 |
+| BDR-005 | 2026-05-11 | Auth flow | Magic link uniquement V1 — résolu 2026-06-03 |
 | BDR-006 | 2026-06-01 | Contraintes DB | Stratégie contraintes rôles provider (V1 vs V2) |
+| BDR-007 | 2026-06-03 | Sécurité | dev-login route à supprimer avant prod |
+| DETTE-DB-001 | 2026-06-04 | DB/Migrations | __drizzle_migrations id=9 sans fichier SQL local — tables group/slot créées hors migration |
 
 ---
 
@@ -70,12 +72,12 @@ Schema:
 ### BDR-005: Magic link uniquement en V1
 - **Date**: 2026-05-11
 - **Title**: V1 auth flow
-- **Decision**: Magic link uniquement via Resend. Email+password activé temporairement pour dev local uniquement.
+- **Decision**: Magic link uniquement. Transport = `console.log` en dev (URL dans terminal), Resend en prod.
 - **Why**: Zéro mot de passe oublié, zéro reset flow à gérer. Cible (centres sociaux) pas d'habitude SaaS — magic link plus simple.
 - **Alternatives**:
   - Password: activable V1.5 si demande utilisateur
-- **Status**: active
-- **Note**: [app/login/page.tsx](app/login/page.tsx) implémente actuellement email+password — À corriger avant livraison V1
+- **Status**: active — implémenté 2026-06-03
+- **Implémentation**: login page = champ email seul → `authClient.signIn.magicLink()`. `server/auth/config.ts` plugin magicLink avec `sendMagicLink: console.log`. `additionalFields` role + centreId exposés dans session.
 
 ### BDR-006: Stratégie contraintes rôles provider (V1 vs V2)
 - **Date**: 2026-06-01
@@ -98,3 +100,19 @@ Schema:
   - Migration data : mapper codes texte → UUID
   - Garantit cohérence référentielle complète
 - **Status**: active
+
+### DETTE-DB-001: __drizzle_migrations désynchronisé
+- **Date**: 2026-06-04
+- **Title**: DB migrations hors drizzle-kit
+- **Decision**: Tables `workshop_role_group` et `workshop_role_slot` créées en DB sans fichier SQL correspondant. `__drizzle_migrations` contient id=9 (hash `bfc2d7e09e578df4b56f002759c5090bbb5c871a889da062a257ddab0ca575a4`) absent du journal local (`meta/_journal.json` s'arrête à idx=8).
+- **Why**: Migration appliquée hors drizzle-kit (push ou SQL direct) lors de session précédente.
+- **Impact**: Pas de blocage dev. Bloquant avant déploiement prod — Render lancera `db:migrate` qui verra une divergence de hash.
+- **À faire avant prod**: Script d'initialisation idempotent (`CREATE TABLE IF NOT EXISTS`) ou réconciliation manuelle du journal (`INSERT INTO __drizzle_migrations` avec hash du fichier généré par `drizzle-kit generate`).
+- **Status**: active — dette à traiter avant prod
+
+### BDR-007: dev-login route à supprimer avant prod
+- **Date**: 2026-06-03
+- **Title**: Sécurité — route dev
+- **Decision**: Route `/dev-login` identifiée dans le build. Doit être supprimée avant tout déploiement prod.
+- **Why**: Contournement auth en dev — exposition en prod = faille critique.
+- **Status**: active — à exécuter en Session 3 avant déploiement

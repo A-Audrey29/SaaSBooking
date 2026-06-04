@@ -78,6 +78,15 @@ Avant chaque livraison, Claude Code produit dans sa réponse, dans cet ordre :
 
 Aucune action irréversible (`db:push`, `db:migrate`, `DROP`, suppression fichier) sans build vert ET GO explicite d'Audrey dans le chat.
 
+## Fin de session
+- Lancer pnpm tsc --noEmit (vert obligatoire 
+
+
+avant commit)
+- Git commit avec message structuré
+- Rappel manuel : /graphify update . à lancer dans le chat
+  pour mettre à jour le knowledge graph
+
 ## Gouvernance
 - Si proposition de changement de stack ou de sur-ingénierie → réponse standard : **« Suis le CLAUDE.md, n'en dévie pas. »**
 - Si Claude Code propose une décision produit (UX, métier, périmètre) → s'arrêter et demander, ne pas trancher seul.

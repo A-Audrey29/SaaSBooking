@@ -3,6 +3,7 @@
  */
 
 import { pgTable, uuid, timestamp, text, integer, index, unique, boolean } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { centre } from "./centre";
 import { project } from "./project";
 
@@ -97,3 +98,28 @@ export const workshopRoleSlot = pgTable(
     workshopRoleGroupIdx: index("workshop_role_slot_workshop_role_group_idx").on(table.workshopRoleGroupId),
   })
 );
+
+// ─── Relations ───────────────────────────────────────────────────────────────
+
+export const workshopTypeRelations = relations(workshopType, ({ one, many }) => ({
+  centre: one(centre, {
+    fields: [workshopType.centreId],
+    references: [centre.id],
+  }),
+  workshopRoleGroups: many(workshopRoleGroup),
+}));
+
+export const workshopRoleGroupRelations = relations(workshopRoleGroup, ({ one, many }) => ({
+  workshopType: one(workshopType, {
+    fields: [workshopRoleGroup.workshopTypeId],
+    references: [workshopType.id],
+  }),
+  workshopRoleSlots: many(workshopRoleSlot),
+}));
+
+export const workshopRoleSlotRelations = relations(workshopRoleSlot, ({ one }) => ({
+  workshopRoleGroup: one(workshopRoleGroup, {
+    fields: [workshopRoleSlot.workshopRoleGroupId],
+    references: [workshopRoleGroup.id],
+  }),
+}));
