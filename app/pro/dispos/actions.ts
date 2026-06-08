@@ -5,14 +5,17 @@ import {
   createAvailability,
   deleteAvailability,
   createRecurringAvailabilities,
+  createDateException,
 } from "@/server/mutations/provider-availability";
 import {
   CreateAvailabilitySchema,
   DeleteAvailabilitySchema,
   CreateRecurringAvailabilitiesSchema,
+  CreateDateExceptionSchema,
   type CreateAvailabilityInput,
   type DeleteAvailabilityInput,
   type CreateRecurringAvailabilitiesInput,
+  type CreateDateExceptionInput,
 } from "@/server/validations/provider-availability";
 import { revalidatePath } from "next/cache";
 
@@ -53,6 +56,24 @@ export async function createRecurringAvailabilitiesAction(
     const ctx = await requireRole("provider");
     const parsed = CreateRecurringAvailabilitiesSchema.parse(input);
     const { created, deleted } = await createRecurringAvailabilities(parsed, ctx);
+    revalidatePath("/pro/dispos");
+    return { ok: true, created, deleted };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erreur inconnue" };
+  }
+}
+
+type ExceptionResult =
+  | { ok: true; created: number; deleted: number }
+  | { ok: false; error: string };
+
+export async function createDateExceptionAction(
+  input: CreateDateExceptionInput
+): Promise<ExceptionResult> {
+  try {
+    const ctx = await requireRole("provider");
+    const parsed = CreateDateExceptionSchema.parse(input);
+    const { created, deleted } = await createDateException(parsed, ctx);
     revalidatePath("/pro/dispos");
     return { ok: true, created, deleted };
   } catch (e) {

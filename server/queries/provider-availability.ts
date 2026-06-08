@@ -17,6 +17,7 @@ export async function getMyAvailabilities(providerId: string) {
       id: schema.providerAvailability.id,
       startAt: schema.providerAvailability.startAt,
       endAt: schema.providerAvailability.endAt,
+      kind: schema.providerAvailability.kind,
     })
     .from(schema.providerAvailability)
     .where(
@@ -40,6 +41,7 @@ export async function getMyAvailabilitiesInRange(providerId: string, from: Date,
       id: schema.providerAvailability.id,
       startAt: schema.providerAvailability.startAt,
       endAt: schema.providerAvailability.endAt,
+      kind: schema.providerAvailability.kind,
     })
     .from(schema.providerAvailability)
     .where(

@@ -12,6 +12,7 @@ import type {
   CreateAvailabilityInput,
   DeleteAvailabilityInput,
   CreateRecurringAvailabilitiesInput,
+  CreateDateExceptionInput,
 } from "@/server/validations/provider-availability";
 import {
   addDaysISO,
@@ -30,7 +31,73 @@ export async function createAvailability(
     providerId: prov.id,
     startAt: input.startAt,
     endAt: input.endAt,
+    kind: input.kind,
   });
+}
+
+/**
+ * Exception ponctuelle sur une journée (onglet "Exceptions").
+ *
+ * - `kind = 'unavailable'` : marque la journée comme indisponible. Les créneaux
+ *   "available" existants qui chevauchent cette journée sont soft-supprimés
+ *   (sauf ceux protégés par un booking confirmé), et un créneau "unavailable"
+ *   couvrant la journée entière (00:00–24:00 GP) est inséré.
+ * - `kind = 'available'` : insère un créneau "available" couvrant la journée
+ *   entière (00:00–24:00 GP).
+ *
+ * Retourne le nombre de créneaux créés et supprimés.
+ */
+export async function createDateException(
+  input: CreateDateExceptionInput,
+  ctx: ServerContext
+): Promise<{ created: number; deleted: number }> {
+  const prov = await resolveProviderFromUser(ctx.userId);
+  if (!prov) throw new Error("Aucun prestataire associé à ce compte");
+
+  const dayStartUtc = gpDateTimeToUtc(input.date, 0, 0);
+  const dayEndUtc = gpDateTimeToUtc(addDaysISO(input.date, 1), 0, 0);
+
+  let deleted = 0;
+
+  if (input.kind === "unavailable") {
+    const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
+      aStart < bEnd && aEnd > bStart;
+
+    const [existing, bookings] = await Promise.all([
+      getMyAvailabilitiesInRange(prov.id, dayStartUtc, dayEndUtc),
+      getMyConfirmedBookings(prov.id, dayStartUtc, dayEndUtc),
+    ]);
+
+    const toDelete = existing.filter(
+      (a) =>
+        a.kind === "available" &&
+        overlaps(a.startAt, a.endAt, dayStartUtc, dayEndUtc) &&
+        !bookings.some((b) => overlaps(a.startAt, a.endAt, b.startAt, b.endAt))
+    );
+
+    if (toDelete.length > 0) {
+      await db
+        .update(schema.providerAvailability)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(
+            eq(schema.providerAvailability.providerId, prov.id),
+            isNull(schema.providerAvailability.deletedAt),
+            inArray(schema.providerAvailability.id, toDelete.map((a) => a.id))
+          )
+        );
+      deleted = toDelete.length;
+    }
+  }
+
+  await db.insert(schema.providerAvailability).values({
+    providerId: prov.id,
+    startAt: dayStartUtc,
+    endAt: dayEndUtc,
+    kind: input.kind,
+  });
+
+  return { created: 1, deleted };
 }
 
 export async function deleteAvailability(

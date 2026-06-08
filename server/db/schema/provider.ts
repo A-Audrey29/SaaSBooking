@@ -2,7 +2,8 @@
  * Provider schema - external service providers.
  */
 
-import { pgTable, uuid, timestamp, text, index, unique } from "drizzle-orm/pg-core";
+import { pgTable, uuid, timestamp, text, index, unique, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { project } from "./project";
 import { metier } from "./metier";
 import { user } from "./auth";
@@ -58,7 +59,10 @@ export const providerAssignment = pgTable(
 );
 
 /**
- * Provider availability - time windows when a provider is available.
+ * Provider availability - time windows when a provider is available or unavailable.
+ * `kind = 'available'` : couverture positive (filtre getProvidersForSlot).
+ * `kind = 'unavailable'` : exception ponctuelle déclarée par le prestataire — bloque
+ * une plage sans être comptée comme couverture.
  * Overlaps not constrained in V1 (BDR-008).
  */
 export const providerAvailability = pgTable(
@@ -70,6 +74,7 @@ export const providerAvailability = pgTable(
       .references(() => provider.id, { onDelete: "cascade" }),
     startAt: timestamp("start_at", { withTimezone: true }).notNull(),
     endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+    kind: text("kind").notNull().default("available"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete
@@ -77,5 +82,6 @@ export const providerAvailability = pgTable(
   (table) => ({
     providerIdx: index("provider_availability_provider_idx").on(table.providerId),
     startAtIdx: index("provider_availability_start_at_idx").on(table.startAt),
+    kindCheck: check("provider_availability_kind_check", sql`${table.kind} IN ('available', 'unavailable')`),
   })
 );

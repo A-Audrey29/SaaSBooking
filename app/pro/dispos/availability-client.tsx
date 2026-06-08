@@ -15,8 +15,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   createRecurringAvailabilitiesAction,
+  createDateExceptionAction,
   deleteAvailabilityAction,
 } from "./actions";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import {
   todayISO,
   addDaysISO,
@@ -76,11 +84,13 @@ export function AvailabilityClient({ initialAvailabilities, initialBookings }: P
   // Avails as parsed Date ranges (computed once).
   const avails = useMemo(
     () =>
-      initialAvailabilities.map((a) => ({
-        id: a.id,
-        start: new Date(a.startAt),
-        end: new Date(a.endAt),
-      })),
+      initialAvailabilities
+        .filter((a) => a.kind === "available")
+        .map((a) => ({
+          id: a.id,
+          start: new Date(a.startAt),
+          end: new Date(a.endAt),
+        })),
     [initialAvailabilities]
   );
 
@@ -463,6 +473,9 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
   const [recurring, setRecurring] = useState<RecurringDay[]>(defaultRecurring);
   const [from, setFrom] = useState(todayISO());
   const [to, setTo] = useState(addDaysISO(todayISO(), 56)); // 8 semaines par défaut
+  const [exceptionDate, setExceptionDate] = useState(todayISO());
+  const [exceptionKind, setExceptionKind] = useState<"available" | "unavailable">("unavailable");
+  const [activeTab, setActiveTab] = useState<"recurring" | "window" | "exceptions">("recurring");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -484,6 +497,23 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
     });
   }
 
+  function saveException() {
+    setError(null);
+    setInfo(null);
+    startTransition(async () => {
+      const res = await createDateExceptionAction({ date: exceptionDate, kind: exceptionKind });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      const label = exceptionKind === "unavailable" ? "Indisponible" : "Disponible";
+      const parts = [`Journée marquée "${label}"`];
+      if (res.deleted > 0) parts.push(`${res.deleted} créneau(x) existant(s) supprimé(s)`);
+      setInfo(parts.join(", ") + ".");
+      router.refresh();
+    });
+  }
+
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full sm:max-w-[460px] overflow-y-auto flex flex-col">
@@ -492,10 +522,11 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
           <SheetTitle>Modifier mes disponibilités</SheetTitle>
         </SheetHeader>
 
-        <Tabs defaultValue="recurring" className="mt-4 flex-1">
-          <TabsList className="grid grid-cols-2 w-full">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="mt-4 flex-1">
+          <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="recurring">Récurrent</TabsTrigger>
             <TabsTrigger value="window">Période</TabsTrigger>
+            <TabsTrigger value="exceptions">Exceptions</TabsTrigger>
           </TabsList>
 
           <TabsContent value="recurring" className="space-y-3">
@@ -628,13 +659,41 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
               />
             </div>
           </TabsContent>
+
+          <TabsContent value="exceptions" className="space-y-3">
+            <p className="text-t-xs text-ink-500">
+              Déclarez une exception ponctuelle pour une journée précise (jour férié, congé,
+              disponibilité exceptionnelle…).
+            </p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={exceptionDate}
+                onChange={(e) => setExceptionDate(e.target.value)}
+                className="h-8"
+              />
+              <Select value={exceptionKind} onValueChange={(v) => setExceptionKind(v as typeof exceptionKind)}>
+                <SelectTrigger className="h-8 w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unavailable">Indisponible</SelectItem>
+                  <SelectItem value="available">Disponible</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </TabsContent>
         </Tabs>
 
         {error && <p className="text-t-sm text-destructive">{error}</p>}
         {info && <p className="text-t-sm text-s-confirmed-ink">{info}</p>}
 
         <SheetFooter className="mt-4">
-          <Button onClick={save} disabled={isPending} className="flex-1">
+          <Button
+            onClick={activeTab === "exceptions" ? saveException : save}
+            disabled={isPending}
+            className="flex-1"
+          >
             {isPending ? "Enregistrement…" : "Enregistrer"}
           </Button>
           <Button variant="outline" onClick={onClose}>

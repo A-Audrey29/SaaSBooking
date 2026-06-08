@@ -1,15 +1,29 @@
 import { z } from "zod";
 
+export const AvailabilityKind = z.enum(["available", "unavailable"]);
+
 export const CreateAvailabilitySchema = z
   .object({
     startAt: z.coerce.date(),
     endAt: z.coerce.date(),
+    kind: AvailabilityKind.default("available"),
   })
   .refine((d) => d.endAt > d.startAt, {
     message: "endAt must be after startAt",
     path: ["endAt"],
   });
 export type CreateAvailabilityInput = z.infer<typeof CreateAvailabilitySchema>;
+
+/**
+ * Exception ponctuelle sur une date donnée (onglet "Exceptions").
+ * `kind = 'unavailable'` → bloque toute la journée (00:00–24:00 heure Guadeloupe).
+ * `kind = 'available'` → ajoute un créneau de couverture pour cette journée.
+ */
+export const CreateDateExceptionSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date ISO YYYY-MM-DD invalide"),
+  kind: AvailabilityKind,
+});
+export type CreateDateExceptionInput = z.infer<typeof CreateDateExceptionSchema>;
 
 export const DeleteAvailabilitySchema = z.object({
   availabilityId: z.string().uuid(),

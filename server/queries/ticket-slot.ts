@@ -47,6 +47,7 @@ export async function getProvidersForSlot(slotId: string, centreId: string) {
         eq(schema.providerAvailability.providerId, schema.provider.id),
         lte(schema.providerAvailability.startAt, schema.occurrence.startAt),
         gte(schema.providerAvailability.endAt, schema.occurrence.endAt),
+        eq(schema.providerAvailability.kind, "available"),
         isNull(schema.providerAvailability.deletedAt)
       )
     )

@@ -92,6 +92,13 @@
       "when": 1780600000002,
       "tag": "0012_provider_availability",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1780950924265,
+      "tag": "0013_provider_availability_kind",
+      "breakpoints": true
     }
   ]
 }
