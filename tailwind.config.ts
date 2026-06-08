@@ -41,6 +41,11 @@ const config: Config = {
           soft: "var(--brand-soft)",
           ink: "var(--brand-ink)",
         },
+        "s-confirmed": {
+          bg: "var(--s-confirmed-bg)",
+          border: "var(--s-confirmed-border)",
+          ink: "var(--s-confirmed-ink)",
+        },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",

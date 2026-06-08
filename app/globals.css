@@ -40,6 +40,11 @@
     --brand: oklch(62% .16 30);
     --brand-soft: oklch(93% .05 30);
     --brand-ink: oklch(45% .15 30);
+
+    /* Statut "confirmé" (vert) — utilisé par le calendrier dispos prestataire */
+    --s-confirmed-bg: oklch(94% .035 145);
+    --s-confirmed-border: oklch(80% .07 145);
+    --s-confirmed-ink: oklch(42% .07 145);
   }
 
   .dark {

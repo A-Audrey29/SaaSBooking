@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq, isNull, and, asc } from "drizzle-orm";
+import { eq, isNull, and, asc, gte, lte } from "drizzle-orm";
 import { db, schema } from "@/server/db/client";
 
 export async function resolveProviderFromUser(userId: string) {
@@ -29,3 +29,26 @@ export async function getMyAvailabilities(providerId: string) {
 }
 
 export type ProviderAvailabilityRow = Awaited<ReturnType<typeof getMyAvailabilities>>[number];
+
+/**
+ * Créneaux d'un prestataire chevauchant la fenêtre [from, to].
+ * (startAt < to AND endAt > from)
+ */
+export async function getMyAvailabilitiesInRange(providerId: string, from: Date, to: Date) {
+  return db
+    .select({
+      id: schema.providerAvailability.id,
+      startAt: schema.providerAvailability.startAt,
+      endAt: schema.providerAvailability.endAt,
+    })
+    .from(schema.providerAvailability)
+    .where(
+      and(
+        eq(schema.providerAvailability.providerId, providerId),
+        isNull(schema.providerAvailability.deletedAt),
+        lte(schema.providerAvailability.startAt, to),
+        gte(schema.providerAvailability.endAt, from)
+      )
+    )
+    .orderBy(asc(schema.providerAvailability.startAt));
+}
