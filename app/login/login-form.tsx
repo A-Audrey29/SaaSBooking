@@ -1,18 +1,24 @@
 "use client";
 
 import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { login } from "./login.action";
 
-const initialState = { error: "" };
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 disabled:opacity-50"
+    >
+      {pending ? "Connexion..." : "Se connecter"}
+    </button>
+  );
+}
 
 export function LoginForm() {
-  const [state, formAction, isPending] = useActionState(
-    async (_prev: typeof initialState, formData: FormData) => {
-      const result = await login(formData);
-      return result ?? initialState;
-    },
-    initialState,
-  );
+  const [state, formAction] = useActionState(login, undefined);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -42,16 +48,10 @@ export function LoginForm() {
           className="w-full px-3 py-2 border rounded-md"
         />
       </div>
-      {state.error && (
+      {state?.error && (
         <p className="text-sm text-destructive">{state.error}</p>
       )}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 disabled:opacity-50"
-      >
-        {isPending ? "Connexion..." : "Se connecter"}
-      </button>
+      <SubmitButton />
     </form>
   );
 }

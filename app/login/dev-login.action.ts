@@ -32,7 +32,7 @@ export async function devLogin(email: string): Promise<never> {
     const name = nameValue.slice(0, eq).trim();
     const value = nameValue.slice(eq + 1).trim();
     if (!name) continue;
-    cookieStore.set(name, value, { path: "/", httpOnly: true, sameSite: "lax" });
+    cookieStore.set(name, decodeURIComponent(value), { path: "/", httpOnly: true, sameSite: "lax" });
   }
 
   redirect(ROLE_REDIRECTS[email] ?? "/");

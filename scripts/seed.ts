@@ -259,7 +259,7 @@ async function main() {
     .returning();
   console.log(`  → Workshops: ${workshop1.nom}, ${workshop2.nom}`);
 
-  // Create providers (business entities — not linked to user accounts in V1)
+  // Create providers
   const [provider1] = await db
     .insert(schema.provider)
     .values({
@@ -272,18 +272,94 @@ async function main() {
     })
     .returning();
 
+  // provider2 linked to providerUser (jean.dumont) via BDR-010
   const [provider2] = await db
     .insert(schema.provider)
     .values({
-      nom: "Patrick Ramdine",
-      email: "p.ramdine@example.gp",
+      userId: providerUser.id,
+      nom: "Jean Dumont",
+      email: "jean.dumont@provider.dev",
       telephone: "0690 22 33 44",
       ville: "Le Gosier",
       metierId: metierByNom["Éducateur sportif"],
       bio: "Coach sportif et éducateur sportif diplômé d'État.",
     })
     .returning();
-  console.log(`  → Providers: ${provider1.nom}, ${provider2.nom}`);
+  console.log(`  → Providers: ${provider1.nom}, ${provider2.nom} (lié user: ${providerUser.email})`);
+
+  // Create session_group + occurrences with dates around today for calendar testing
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  function nextWeekday(base: Date, offsetDays: number, hour = 9): Date {
+    const d = new Date(base);
+    d.setDate(d.getDate() + offsetDays);
+    d.setHours(hour, 0, 0, 0);
+    return d;
+  }
+
+  const [sg1] = await db
+    .insert(schema.sessionGroup)
+    .values({
+      workshopId: workshop1.id,
+      centreId: centreData.id,
+      nom: "Groupe Parents — Émotions",
+      audience: "8 parents",
+      createdBy: referent1.id,
+    })
+    .returning();
+
+  const occurrences1 = [
+    { index: 1, offsetDays: 1, duration: 120 },
+    { index: 2, offsetDays: 8, duration: 120 },
+    { index: 3, offsetDays: 15, duration: 120 },
+    { index: 4, offsetDays: 22, duration: 120 },
+  ];
+
+  for (const occ of occurrences1) {
+    const startAt = nextWeekday(today, occ.offsetDays, 9);
+    const endAt = new Date(startAt.getTime() + occ.duration * 60_000);
+    await db.insert(schema.occurrence).values({
+      sessionGroupId: sg1.id,
+      index: occ.index,
+      startAt,
+      endAt,
+      statut: "planned",
+      workshopRoleGroupId: group1.id,
+    });
+  }
+
+  const [sg2] = await db
+    .insert(schema.sessionGroup)
+    .values({
+      workshopId: workshop2.id,
+      centreId: centreData.id,
+      nom: "Groupe Ados — Sport",
+      audience: "12 ados 14-16 ans",
+      createdBy: referent1.id,
+    })
+    .returning();
+
+  const occurrences2 = [
+    { index: 1, offsetDays: 2, duration: 90 },
+    { index: 2, offsetDays: 9, duration: 90 },
+    { index: 3, offsetDays: 16, duration: 90 },
+  ];
+
+  for (const occ of occurrences2) {
+    const startAt = nextWeekday(today, occ.offsetDays, 14);
+    const endAt = new Date(startAt.getTime() + occ.duration * 60_000);
+    await db.insert(schema.occurrence).values({
+      sessionGroupId: sg2.id,
+      index: occ.index,
+      startAt,
+      endAt,
+      statut: "planned",
+      workshopRoleGroupId: group2.id,
+    });
+  }
+
+  console.log(`  → Session groups: ${sg1.nom}, ${sg2.nom} (7 occurrences)`);
 
   console.log("✓ Seed completed");
 }

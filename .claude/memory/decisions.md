@@ -23,6 +23,9 @@ Schema:
 | BDR-006 | 2026-06-01 | Contraintes DB | Stratégie contraintes rôles provider (V1 vs V2) |
 | BDR-007 | 2026-06-03 | Sécurité | dev-login route à supprimer avant prod |
 | DETTE-DB-001 | 2026-06-04 | DB/Migrations | __drizzle_migrations id=9 sans fichier SQL local — tables group/slot créées hors migration |
+| BDR-008 | 2026-06-04 | Availability | Chevauchement dispos non contraint en V1 |
+| BDR-009 | 2026-06-04 | Availability | getProvidersForSlot : scope métier+dispo, providerAssignment retiré |
+| BDR-010 | 2026-06-04 | Provider | Lien provider↔user via userId FK UNIQUE sur provider |
 
 ---
 
@@ -109,6 +112,30 @@ Schema:
 - **Impact**: Pas de blocage dev. Bloquant avant déploiement prod — Render lancera `db:migrate` qui verra une divergence de hash.
 - **À faire avant prod**: Script d'initialisation idempotent (`CREATE TABLE IF NOT EXISTS`) ou réconciliation manuelle du journal (`INSERT INTO __drizzle_migrations` avec hash du fichier généré par `drizzle-kit generate`).
 - **Status**: active — dette à traiter avant prod
+
+### BDR-008: Chevauchement dispos non contraint en V1
+- **Date**: 2026-06-04
+- **Title**: provider_availability — overlap constraint
+- **Decision**: Pas de CHECK ni contrainte DB sur chevauchement des créneaux de disponibilité en V1.
+- **Why**: Spec §5.3 : "non chevauchants recommandés, non contraints en V1". YAGNI — l'UI peut avertir, la DB n'impose rien.
+- **V2 prévu**: Exclusion contrainte via EXCLUDE USING gist (tstzrange) si besoin.
+- **Status**: active
+
+### BDR-009: getProvidersForSlot — scope métier+dispo, providerAssignment retiré
+- **Date**: 2026-06-04
+- **Title**: Provider slot filter strategy S10
+- **Decision**: `getProvidersForSlot` filtre par `provider.metier_id = workshopRoleSlot.metierId` + `provider_availability` couvrant le créneau. `providerAssignment` n'est plus utilisé comme fence.
+- **Why**: Spec §5.3 — le bon prestataire = bon métier + disponible. La notion de projet n'est pas un critère de filtre pour la visibilité des prestataires côté référent.
+- **Alternatives**: Garder `providerAssignment` comme fence additionnelle — rejeté, non requis par spec.
+- **Status**: active
+
+### BDR-010: Lien provider↔user via userId FK UNIQUE
+- **Date**: 2026-06-04
+- **Title**: Provider identity resolution
+- **Decision**: Ajouter colonne `user_id uuid UNIQUE` FK → `user(id) ON DELETE SET NULL` sur table `provider`. Les mutations Bloc B résolvent `providerId` via `WHERE user_id = ctx.userId AND deleted_at IS NULL`.
+- **Why**: `provider.email` n'a pas de UNIQUE constraint → jointure par email unsafe. FK authoritative évite toute ambiguïté et permet de résoudre le providerId depuis le contexte serveur sans passer par le client.
+- **Alternatives**: UNIQUE sur `provider.email` — rejeté, email peut changer, moins propre.
+- **Status**: active
 
 ### BDR-007: dev-login route à supprimer avant prod
 - **Date**: 2026-06-03

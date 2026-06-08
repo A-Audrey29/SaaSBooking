@@ -17,7 +17,10 @@ const ROLE_REDIRECTS: Record<string, string> = {
   provider: "/pro",
 };
 
-export async function login(formData: FormData): Promise<{ error: string } | never> {
+export async function login(
+  _prevState: { error: string } | undefined,
+  formData: FormData
+): Promise<{ error: string } | never> {
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -47,7 +50,7 @@ export async function login(formData: FormData): Promise<{ error: string } | nev
     const name = nameValue.slice(0, eq).trim();
     const value = nameValue.slice(eq + 1).trim();
     if (!name) continue;
-    cookieStore.set(name, value, { path: "/", httpOnly: true, sameSite: "lax" });
+    cookieStore.set(name, decodeURIComponent(value), { path: "/", httpOnly: true, sameSite: "lax" });
   }
 
   // Read role from session to determine redirect
