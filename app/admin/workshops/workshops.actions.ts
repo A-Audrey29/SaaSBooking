@@ -13,6 +13,7 @@ import {
   CreateRoleSlotSchema,
   UpdateRoleSlotSchema,
   SoftDeleteSchema,
+  QuickCreateWorkshopTypeSchema,
   type CreateWorkshopTypeInput,
   type UpdateWorkshopTypeInput,
   type CreateRoleGroupInput,
@@ -20,7 +21,58 @@ import {
   type CreateRoleSlotInput,
   type UpdateRoleSlotInput,
   type SoftDeleteInput,
+  type QuickCreateWorkshopTypeInput,
 } from "@/server/validations/workshop";
+
+// ─── QuickCreate (type + default group + slots) ──────────────────────────────
+
+export async function quickCreateWorkshopType(
+  data: QuickCreateWorkshopTypeInput
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  try {
+    await requireRole("super_admin");
+    const validated = QuickCreateWorkshopTypeSchema.parse(data);
+
+    const result = await db.transaction(async (tx) => {
+      const [type] = await tx
+        .insert(schema.workshopType)
+        .values({
+          centreId: validated.centreId,
+          code: validated.code,
+          nom: validated.nom,
+          description: validated.description,
+        })
+        .returning();
+
+      const [group] = await tx
+        .insert(schema.workshopRoleGroup)
+        .values({
+          workshopTypeId: type.id,
+          label: "Configuration standard",
+          ordre: 0,
+        })
+        .returning();
+
+      if (validated.metierIds.length > 0) {
+        await tx.insert(schema.workshopRoleSlot).values(
+          validated.metierIds.map((metierId, idx) => ({
+            workshopRoleGroupId: group.id,
+            metierId,
+            ordre: idx,
+          }))
+        );
+      }
+
+      return type;
+    });
+
+    revalidatePath("/admin/workshops");
+    return { ok: true, id: result.id };
+  } catch (error) {
+    console.error("[quickCreateWorkshopType]", error);
+    return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
+  }
+}
 
 // ─── WorkshopType ────────────────────────────────────────────────────────────
 

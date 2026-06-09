@@ -22,6 +22,7 @@ import {
 import { WorkshopTypeForm } from "./workshop-type-form";
 import { RoleGroupForm } from "./role-group-form";
 import { RoleSlotForm } from "./role-slot-form";
+import { WorkshopQuickCreateDrawer } from "./workshop-quick-create-drawer";
 import {
   softDeleteWorkshopType,
   softDeleteRoleGroup,
@@ -84,6 +85,7 @@ export function WorkshopsClient({ workshopTypes, centres, metiers }: WorkshopsCl
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null);
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -126,8 +128,8 @@ export function WorkshopsClient({ workshopTypes, centres, metiers }: WorkshopsCl
     <div className="px-4 md:px-8 py-6 md:py-8 max-w-[1100px] mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-h-2xl font-semibold tracking-tight">Types d'ateliers</h1>
-        <Button onClick={() => setSheetMode({ kind: "create-type" })}>
-          + Nouveau type d'atelier
+        <Button onClick={() => setQuickCreateOpen(true)}>
+          + Nouvel atelier
         </Button>
       </div>
 
@@ -301,7 +303,15 @@ export function WorkshopsClient({ workshopTypes, centres, metiers }: WorkshopsCl
         ))}
       </div>
 
-      {/* Sheet */}
+      {/* Quick create drawer */}
+      <WorkshopQuickCreateDrawer
+        open={quickCreateOpen}
+        onClose={() => setQuickCreateOpen(false)}
+        centres={centres}
+        metiers={metiers}
+      />
+
+      {/* Advanced sheet */}
       <Sheet open={sheetMode !== null} onOpenChange={(o) => !o && setSheetMode(null)}>
         <SheetContent>
           <SheetHeader>

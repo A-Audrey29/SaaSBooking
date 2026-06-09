@@ -56,6 +56,18 @@ export const UpdateRoleSlotSchema = z.object({
   ordre: z.number().int().default(0),
 });
 
+// -- QuickCreate (type + group + slots in one transaction) --
+
+export const QuickCreateWorkshopTypeSchema = z.object({
+  centreId: z.preprocess((v) => (v === "" ? null : v), z.string().uuid().nullable()),
+  code: z.string().min(2).max(50).trim().transform((v) => v.toUpperCase()),
+  nom: z.string().min(2).max(200).trim(),
+  description: z.string().max(1000).trim().optional(),
+  metierIds: z.array(z.string().uuid()).min(1, "Sélectionner au moins 1 métier"),
+});
+
+export type QuickCreateWorkshopTypeInput = z.infer<typeof QuickCreateWorkshopTypeSchema>;
+
 // -- Shared --
 
 export const SoftDeleteSchema = z.object({

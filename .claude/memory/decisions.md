@@ -31,6 +31,7 @@ Schema:
 | BDR-013 | 2026-06-09 | Provider | Profil prestataire : téléphone/ville/bio auto-éditable. nom/email/métier = admin only |
 | BDR-014 | 2026-06-09 | Auth | Changement mdp : server action bcrypt (pas Better Auth client) — plus simple, cohérent avec setup-password existant |
 | BDR-015 | 2026-06-09 | Sessions | occurrence.startAt/endAt nullable — dates fixées via calendrier dispos |
+| BDR-016 | 2026-06-09 | Admin/Workshops | QuickCreate drawer : type + groupe + slots en 1 transaction |
 
 ---
 
@@ -178,6 +179,14 @@ Schema:
 - **Decision**: `occurrence.start_at` et `end_at` passent nullable (migration 0014). Le wizard "nouvelle séance" crée N occurrences sans dates. Les dates sont fixées ultérieurement lors du choix des disponibilités prestataires sur le calendrier.
 - **Why**: Séquence métier correcte — on ne peut pas connaître les dates avant d'avoir identifié les créneaux disponibles des prestataires. Forcer les dates à la création était du sens métier inversé.
 - **Alternatives**: Valeur sentinelle (1970-01-01) — rejeté, dette technique visible.
+- **Status**: active
+
+### BDR-016: QuickCreate drawer — type + groupe + slots en 1 transaction
+- **Date**: 2026-06-09
+- **Title**: Workshop type creation UX
+- **Decision**: Drawer "Nouvel atelier" crée en une transaction atomique : `workshopType` + `workshopRoleGroup` ("Configuration standard") + N `workshopRoleSlot` (chips métiers cliquables). L'UI tree existante reste pour édition fine post-création.
+- **Why**: La création via 3 sheets séparés (type → groupe → slot) était trop lente pour usage quotidien. Transaction garantit cohérence — pas de type orphelin sans groupe.
+- **Alternatives**: Refonte complète de l'UI tree — rejeté, trop de travail pour V1. Mode avancé séparé — rejeté, inutile car le drawer couvre 100% des cas V1.
 - **Status**: active
 
 ### BDR-007: dev-login route à supprimer avant prod
