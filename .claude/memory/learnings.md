@@ -13,6 +13,7 @@ Schema:
 
 | ID | Date | Domaine | Pattern |
 |----|------|---------|---------|
+| LRN-012 | 2026-06-09 | Migrations | Migration manuelle ignorée par le migrator Drizzle |
 | LRN-001 | 2026-05-20 | Migrations | Migration path inconsistency config vs spec |
 | LRN-002 | 2026-05-20 | Scaffold | Scaffold initial non testé = code cassé |
 | LRN-003 | 2026-05-20 | Business | Provider/compétences simplifié V1 (matching manuel) |
@@ -94,6 +95,12 @@ Schema:
 - **Pattern**: `import "dotenv/config"` lit `.env` seulement. Next.js convention = `.env.local` prioritaire.
 - **Context**: Drizzle config ne trouvait pas les variables de dev.
 - **Apply**: utiliser `config({ path: ".env.local" })` puis `config()` en fallback. Appliqué à `drizzle.config.ts` et `scripts/migrate.ts`.
+
+### LRN-012: Migration manuelle ignorée par le migrator Drizzle
+- **Date**: 2026-06-09
+- **Pattern**: Un fichier SQL créé manuellement dans `server/db/migrations/` + entrée ajoutée dans `_journal.json` n'est PAS appliqué par `tsx scripts/migrate.ts`. Le migrator `drizzle-orm/neon-serverless/migrator` hash le contenu SQL et compare avec `drizzle.__drizzle_migrations` — mais il ne pickup pas les fichiers sans snapshot correspondant dans `meta/`.
+- **Context**: Migration `0014_occurrence_nullable_dates.sql` écrite à la main (ALTER TABLE DROP NOT NULL). `npm run db:migrate` retournait "✓ Migrations completed" sans l'appliquer. Colonnes restaient NOT NULL en DB.
+- **Apply**: Pour toute migration manuelle (DDL simple, ALTER, DROP CONSTRAINT…) — ne pas passer par le migrator Drizzle. Appliquer directement via un script `tsx` avec `neon()` HTTP driver. Exemple : `await sql\`ALTER TABLE occurrence ALTER COLUMN start_at DROP NOT NULL\``. Supprimer le script après usage. Le fichier `.sql` reste dans le dossier pour traçabilité git.
 
 ### LRN-011: Table de tracking Drizzle vit dans le schéma `drizzle`
 - **Date**: 2026-05-21
