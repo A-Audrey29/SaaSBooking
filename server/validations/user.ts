@@ -60,8 +60,20 @@ export const SetupPasswordSchema = z.object({
   password: z.string().min(8, "Mot de passe min 8 caractères"),
 });
 
+export const ChangePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Mot de passe actuel requis"),
+    newPassword: z.string().min(8, "Nouveau mot de passe min 8 caractères"),
+    confirmPassword: z.string().min(1, "Confirmation requise"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Les mots de passe ne correspondent pas",
+    path: ["confirmPassword"],
+  });
+
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 export type SoftDeleteUserInput = z.infer<typeof SoftDeleteUserSchema>;
 export type ResendInvitationInput = z.infer<typeof ResendInvitationSchema>;
 export type SetupPasswordInput = z.infer<typeof SetupPasswordSchema>;
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;

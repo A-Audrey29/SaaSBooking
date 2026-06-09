@@ -26,6 +26,10 @@ Schema:
 | BDR-008 | 2026-06-04 | Availability | Chevauchement dispos non contraint en V1 |
 | BDR-009 | 2026-06-04 | Availability | getProvidersForSlot : scope métier+dispo, providerAssignment retiré |
 | BDR-010 | 2026-06-04 | Provider | Lien provider↔user via userId FK UNIQUE sur provider |
+| BDR-011 | 2026-06-09 | Users | Filtres /admin/users client-side JS (V2 : searchParams server-side) |
+| BDR-012 | 2026-06-09 | Provider | Documents prestataire exclus V1 — prévu V1.5 (table provider_documents) |
+| BDR-013 | 2026-06-09 | Provider | Profil prestataire : téléphone/ville/bio auto-éditable. nom/email/métier = admin only |
+| BDR-014 | 2026-06-09 | Auth | Changement mdp : server action bcrypt (pas Better Auth client) — plus simple, cohérent avec setup-password existant |
 
 ---
 
@@ -135,6 +139,36 @@ Schema:
 - **Decision**: Ajouter colonne `user_id uuid UNIQUE` FK → `user(id) ON DELETE SET NULL` sur table `provider`. Les mutations Bloc B résolvent `providerId` via `WHERE user_id = ctx.userId AND deleted_at IS NULL`.
 - **Why**: `provider.email` n'a pas de UNIQUE constraint → jointure par email unsafe. FK authoritative évite toute ambiguïté et permet de résoudre le providerId depuis le contexte serveur sans passer par le client.
 - **Alternatives**: UNIQUE sur `provider.email` — rejeté, email peut changer, moins propre.
+- **Status**: active
+
+### BDR-011: Filtres /admin/users client-side
+- **Date**: 2026-06-09
+- **Title**: Users table filters strategy
+- **Decision**: Filtres (recherche texte + rôle) implémentés côté client JS sur données chargées en server component.
+- **Why**: Table petite en V1 (< 100 users typiquement). Pas de round-trip serveur, implémentation simple.
+- **V2 prévu**: Remplacer par `searchParams` URL + WHERE clause serveur si table dépasse 500 lignes.
+- **Status**: active
+
+### BDR-012: Documents prestataire exclus V1
+- **Date**: 2026-06-09
+- **Title**: Provider documents — V1 exclusion
+- **Decision**: Pas de table `provider_documents` en V1. Section documents absente de `/pro/profile`.
+- **Why**: YAGNI — fonctionnalité non critique MVP. Complexité : upload fichiers, validation admin, stockage S3/Supabase Storage.
+- **V1.5 prévu**: Table `provider_documents` (id, provider_id, nom, type, url, statut, uploaded_at, validated_at).
+- **Status**: active
+
+### BDR-013: Profil prestataire — édition partielle
+- **Date**: 2026-06-09
+- **Title**: Provider self-edit scope
+- **Decision**: Le prestataire peut modifier téléphone, ville, bio. Nom, email, métier = lecture seule (admin only via /admin/providers).
+- **Why**: Données contractuelles (nom, email) ne doivent pas changer sans validation admin. Coordonnées de contact = données opérationnelles légitimes à auto-éditer.
+- **Status**: active
+
+### BDR-014: Changement de mot de passe — server action bcrypt
+- **Date**: 2026-06-09
+- **Title**: Password change implementation
+- **Decision**: Server action `changePassword` : vérification bcrypt du mot de passe actuel + update `account.password`. Pas de passage par Better Auth client changePassword.
+- **Why**: Plus simple, cohérent avec `setupPassword` existant. Better Auth `emailAndPassword` activé mais pas d'endpoint `/change-password` exposé côté client dans la config actuelle.
 - **Status**: active
 
 ### BDR-007: dev-login route à supprimer avant prod

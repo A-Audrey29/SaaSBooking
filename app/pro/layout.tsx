@@ -1,6 +1,7 @@
 "use client";
 
 import { AppShell, NavItem } from "@/components/shell/app-shell";
+import { authClient } from "@/lib/auth-client";
 
 const items: NavItem[] = [
   {
@@ -49,8 +50,11 @@ const items: NavItem[] = [
 ];
 
 export default function ProLayout({ children }: { children: React.ReactNode }) {
+  const { data: session } = authClient.useSession();
+  const userName = session?.user?.name ?? "Prestataire";
+
   return (
-    <AppShell brand="SaaS Booking" spaceLabel="Prestataire" userName="Utilisateur" items={items}>
+    <AppShell brand="Asanblé" spaceLabel="Prestataire" userName={userName} items={items}>
       {children}
     </AppShell>
   );

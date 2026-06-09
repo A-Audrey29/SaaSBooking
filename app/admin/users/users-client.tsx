@@ -1,8 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -56,6 +64,23 @@ export function UsersClient({ users, centres }: UsersClientProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+
+  // Client-side filter — V2: replace with searchParams server-side if table grows large
+  const filtered = useMemo(() => {
+    return users.filter((u) => {
+      if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        return (
+          (u.name ?? "").toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [users, search, roleFilter]);
 
   const handleCreate = () => {
     setSelectedUser(null);
@@ -115,6 +140,27 @@ export function UsersClient({ users, centres }: UsersClientProps) {
         <Button onClick={handleCreate}>+ Inviter un utilisateur</Button>
       </div>
 
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <Input
+          placeholder="Rechercher par nom ou email…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 min-w-[200px]"
+        />
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Tous les rôles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les rôles</SelectItem>
+            <SelectItem value="super_admin">Super admin</SelectItem>
+            <SelectItem value="project_admin">Admin projet</SelectItem>
+            <SelectItem value="referent">Référent</SelectItem>
+            <SelectItem value="provider">Prestataire</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -128,14 +174,14 @@ export function UsersClient({ users, centres }: UsersClientProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.length === 0 ? (
+            {filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground">
                   Aucun utilisateur trouvé
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((user) => (
+              filtered.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.name ?? "—"}</TableCell>
