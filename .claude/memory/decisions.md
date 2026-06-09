@@ -15,6 +15,8 @@ Schema:
 
 | ID | Date | Domaine | Décision |
 |----|------|---------|----------|
+| BDR-017 | 2026-06-09 | Référent/Dispo | Prestataires non contraints par centre en V1 |
+| BDR-018 | 2026-06-09 | Référent/UX | Redirect post-création séance → calendrier dispos filtré |
 | BDR-001 | 2026-05-11 | Auth | Better Auth (magic link V1) |
 | BDR-002 | 2026-05-11 | DB/ORM | Neon + Drizzle |
 | BDR-003 | 2026-05-11 | Hosting | Render (pas Vercel) |
@@ -187,6 +189,22 @@ Schema:
 - **Decision**: Drawer "Nouvel atelier" crée en une transaction atomique : `workshopType` + `workshopRoleGroup` ("Configuration standard") + N `workshopRoleSlot` (chips métiers cliquables). L'UI tree existante reste pour édition fine post-création.
 - **Why**: La création via 3 sheets séparés (type → groupe → slot) était trop lente pour usage quotidien. Transaction garantit cohérence — pas de type orphelin sans groupe.
 - **Alternatives**: Refonte complète de l'UI tree — rejeté, trop de travail pour V1. Mode avancé séparé — rejeté, inutile car le drawer couvre 100% des cas V1.
+- **Status**: active
+
+### BDR-017: Prestataires non contraints par centre en V1
+- **Date**: 2026-06-09
+- **Title**: Scope géographique prestataires
+- **Decision**: La query `getProvidersDisposForCentre` ignore `centreId` en V1. Elle retourne tous les prestataires actifs, filtrés uniquement par métier. Le paramètre `_centreId` est conservé dans la signature pour extension future sans casser les appels.
+- **Why**: Les prestataires en Guadeloupe couvrent tout le territoire. Contraindre par `providerAssignment` (table vide en V1) retournait 0 résultats. La liaison projet←→prestataire via `providerAssignment` sera activée en V2 si le périmètre s'étend aux îles voisines.
+- **Alternatives**: Fallback si assignments vide — rejeté, logique conditionnelle fragile. Peupler `providerAssignment` via seed — rejeté, friction inutile en V1.
+- **Status**: active
+
+### BDR-018: Redirect post-création séance → calendrier dispos filtré par métier
+- **Date**: 2026-06-09
+- **Title**: UX wizard séance → disponibilités
+- **Decision**: Après "Créer la séance", redirect vers `/app/availability?metiers=X,Y` avec les noms de métiers cochés en step 2. La page availability filtre automatiquement les prestataires et pré-sélectionne le filtre métier dans la légende.
+- **Why**: Séquence naturelle — créer la séance puis trouver des prestataires disponibles pour fixer les dates. Évite de naviguer manuellement vers Disponibilités et de re-sélectionner les métiers.
+- **Alternatives**: Redirect vers `/app` (liste séances) — rejeté, coupe le flux logique. Intégrer le choix de créneau dans le wizard (step 4) — rejeté, trop complexe pour V1, les données dispos ne sont pas encore chargées.
 - **Status**: active
 
 ### BDR-007: dev-login route à supprimer avant prod

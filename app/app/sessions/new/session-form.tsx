@@ -122,6 +122,11 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
     const checkedList = Array.from(checkedSlotIds);
     if (checkedList.length === 0) { setError("Au moins un rôle requis"); return; }
 
+    // Noms des métiers cochés pour filtrer le calendrier disponibilités
+    const metierNoms = selectedGroup.workshopRoleSlots
+      .filter((s) => checkedSlotIds.has(s.id))
+      .map((s) => s.metier.nom);
+
     setError(null);
     startTransition(async () => {
       const result = await createSessionGroup({
@@ -134,7 +139,10 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
         notes: notes.trim() || undefined,
       });
       if (result.ok) {
-        router.push("/app");
+        const params = metierNoms.length > 0
+          ? `?metiers=${encodeURIComponent(metierNoms.join(","))}`
+          : "";
+        router.push(`/app/availability${params}`);
       } else {
         setError(result.error);
       }
@@ -260,9 +268,27 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
       )}
 
       {/* ── Step 3 — Informations ── */}
-      {step === 3 && selectedWorkshop && (
+      {step === 3 && selectedWorkshop && selectedGroup && (
         <div className="space-y-6">
           <h2 className="text-base font-semibold">Informations</h2>
+
+          {/* Récapitulatif des métiers retenus */}
+          <div className="rounded-lg border bg-muted/40 px-4 py-3 space-y-1">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Métiers retenus</p>
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {selectedGroup.workshopRoleSlots
+                .filter((s) => checkedSlotIds.has(s.id))
+                .map((s) => (
+                  <span
+                    key={s.id}
+                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border font-medium"
+                    style={s.couleur ? { borderColor: s.couleur, color: s.couleur } : undefined}
+                  >
+                    {s.metier.nom}
+                  </span>
+                ))}
+            </div>
+          </div>
 
           {/* Nom de l'atelier pré-rempli */}
           <div className="space-y-2">

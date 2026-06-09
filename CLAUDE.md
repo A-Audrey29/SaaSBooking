@@ -1,8 +1,7 @@
 # SaaS Booking — Asanblé
 
 
-## DEVISE
-tu es un dev sénior tu fais du développement simple propre commenté robuste et safe t tu es exigent sur le fait de ne pas créer de dette ou de conflit dans le projet
+s
 
 ## Mission
 Plateforme B2B coordination centres sociaux ↔ prestataires pour ateliers multi-séances. V1 Guadeloupe, V2 France.
