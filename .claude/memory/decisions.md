@@ -30,6 +30,7 @@ Schema:
 | BDR-012 | 2026-06-09 | Provider | Documents prestataire exclus V1 — prévu V1.5 (table provider_documents) |
 | BDR-013 | 2026-06-09 | Provider | Profil prestataire : téléphone/ville/bio auto-éditable. nom/email/métier = admin only |
 | BDR-014 | 2026-06-09 | Auth | Changement mdp : server action bcrypt (pas Better Auth client) — plus simple, cohérent avec setup-password existant |
+| BDR-015 | 2026-06-09 | Sessions | occurrence.startAt/endAt nullable — dates fixées via calendrier dispos |
 
 ---
 
@@ -169,6 +170,14 @@ Schema:
 - **Title**: Password change implementation
 - **Decision**: Server action `changePassword` : vérification bcrypt du mot de passe actuel + update `account.password`. Pas de passage par Better Auth client changePassword.
 - **Why**: Plus simple, cohérent avec `setupPassword` existant. Better Auth `emailAndPassword` activé mais pas d'endpoint `/change-password` exposé côté client dans la config actuelle.
+- **Status**: active
+
+### BDR-015: occurrence.startAt/endAt nullable
+- **Date**: 2026-06-09
+- **Title**: Dates occurrence fixées via calendrier dispos, pas à la création
+- **Decision**: `occurrence.start_at` et `end_at` passent nullable (migration 0014). Le wizard "nouvelle séance" crée N occurrences sans dates. Les dates sont fixées ultérieurement lors du choix des disponibilités prestataires sur le calendrier.
+- **Why**: Séquence métier correcte — on ne peut pas connaître les dates avant d'avoir identifié les créneaux disponibles des prestataires. Forcer les dates à la création était du sens métier inversé.
+- **Alternatives**: Valeur sentinelle (1970-01-01) — rejeté, dette technique visible.
 - **Status**: active
 
 ### BDR-007: dev-login route à supprimer avant prod
