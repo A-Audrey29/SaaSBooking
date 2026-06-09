@@ -31,7 +31,8 @@ const OCCURRENCE_STATUT_BADGE: Record<string, { label: string; className: string
   cancelled: { label: "Annulée", className: "bg-red-100 text-red-800 border-red-200" },
 };
 
-function formatDate(date: Date | string): string {
+function formatDate(date: Date | string | null): string {
+  if (!date) return "Date à fixer";
   return new Intl.DateTimeFormat("fr-GP", {
     weekday: "short",
     day: "numeric",

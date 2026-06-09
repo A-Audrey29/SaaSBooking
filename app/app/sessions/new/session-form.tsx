@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { createSessionGroup } from "./session.actions";
 
 interface Workshop {
@@ -17,6 +16,7 @@ interface Workshop {
   durationMin: number;
   typeId: string | null;
   typeNom: string | null;
+  defaultRoles: { nom: string; isOptional: boolean; couleur: string | null }[];
 }
 
 interface RoleSlot {
@@ -39,95 +39,86 @@ interface Props {
   getRoleGroups: (workshopTypeId: string) => Promise<RoleGroup[]>;
 }
 
-type DateEntry = { startAt: string; endAt: string };
-
+// Wizard à 3 étapes :
+// 1 — Atelier + configuration de rôles (fusionnés)
+// 2 — Rôles à activer pour cette séance
+// 3 — Informations (nom, numéro session, nb séances, notes)
 export function SessionForm({ workshops, getRoleGroups }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [error, setError] = useState<string | null>(null);
 
   // Step 1
   const [selectedWorkshop, setSelectedWorkshop] = useState<Workshop | null>(null);
-
-  // Step 2
   const [roleGroups, setRoleGroups] = useState<RoleGroup[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<RoleGroup | null>(null);
 
-  // Step 3
+  // Step 2
   const [checkedSlotIds, setCheckedSlotIds] = useState<Set<string>>(new Set());
 
-  // Step 4
+  // Step 3
   const [nom, setNom] = useState("");
+  const [sessionNumber, setSessionNumber] = useState<number>(1);
+  const [seanceCount, setSeanceCount] = useState<number>(1);
   const [notes, setNotes] = useState("");
-  const [dates, setDates] = useState<DateEntry[]>([{ startAt: "", endAt: "" }]);
 
   const handleSelectWorkshop = (w: Workshop) => {
     setSelectedWorkshop(w);
     setSelectedGroup(null);
     setRoleGroups([]);
     setCheckedSlotIds(new Set());
-  };
 
-  const handleNextToStep2 = () => {
-    if (!selectedWorkshop) return;
-    if (!selectedWorkshop.typeId) {
-      setStep(2);
-      return;
-    }
+    if (!w.typeId) return;
+
     setLoadingGroups(true);
     startTransition(async () => {
       try {
-        const groups = await getRoleGroups(selectedWorkshop.typeId!);
+        const groups = await getRoleGroups(w.typeId!);
         setRoleGroups(groups);
       } finally {
         setLoadingGroups(false);
       }
-      setStep(2);
     });
-  };
-
-  const handleSelectGroup = (g: RoleGroup) => {
-    setSelectedGroup(g);
-    // Pré-cocher les slots requis
-    const required = new Set(
-      g.workshopRoleSlots.filter((s) => !s.isOptional).map((s) => s.id)
-    );
-    setCheckedSlotIds(required);
   };
 
   const toggleSlot = (slotId: string) => {
     setCheckedSlotIds((prev) => {
       const next = new Set(prev);
-      if (next.has(slotId)) {
-        next.delete(slotId);
-      } else {
-        next.add(slotId);
-      }
+      if (next.has(slotId)) next.delete(slotId);
+      else next.add(slotId);
       return next;
     });
   };
 
-  const syncDatesCount = (count: number) => {
-    setDates((prev) => {
-      if (count === prev.length) return prev;
-      if (count > prev.length) {
-        return [...prev, ...Array(count - prev.length).fill({ startAt: "", endAt: "" })];
-      }
-      return prev.slice(0, count);
-    });
+  const handleNextToStep2 = () => {
+    if (!selectedWorkshop) return;
+    // Pré-cocher les slots requis du groupe sélectionné (ou du premier groupe chargé)
+    const group = selectedGroup ?? roleGroups[0] ?? null;
+    if (group) {
+      setSelectedGroup(group);
+      const required = new Set(
+        group.workshopRoleSlots.filter((s) => !s.isOptional).map((s) => s.id)
+      );
+      setCheckedSlotIds(required);
+    }
+    setStep(2);
   };
 
-  const updateDate = (index: number, field: "startAt" | "endAt", value: string) => {
-    setDates((prev) => prev.map((d, i) => (i === index ? { ...d, [field]: value } : d)));
+  const handleNextToStep3 = () => {
+    if (checkedSlotIds.size === 0) { setError("Au moins un rôle requis"); return; }
+    setError(null);
+    // Pré-remplir le nom avec le nom de l'atelier sélectionné
+    if (!nom && selectedWorkshop) setNom(selectedWorkshop.nom);
+    // Synchroniser le nombre de séances avec la config de l'atelier
+    if (selectedWorkshop) setSeanceCount(selectedWorkshop.seancesCount || 1);
+    setStep(3);
   };
 
   const handleSubmit = () => {
     if (!selectedWorkshop || !selectedGroup) return;
     if (!nom.trim()) { setError("Nom du groupe requis"); return; }
-    const invalidDate = dates.some((d) => !d.startAt || !d.endAt);
-    if (invalidDate) { setError("Toutes les dates doivent être renseignées"); return; }
     const checkedList = Array.from(checkedSlotIds);
     if (checkedList.length === 0) { setError("Au moins un rôle requis"); return; }
 
@@ -138,11 +129,9 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
         workshopRoleGroupId: selectedGroup.id,
         checkedSlotIds: checkedList,
         nom: nom.trim(),
+        sessionNumber,
+        seanceCount,
         notes: notes.trim() || undefined,
-        dates: dates.map((d) => ({
-          startAt: new Date(d.startAt).toISOString(),
-          endAt: new Date(d.endAt).toISOString(),
-        })),
       });
       if (result.ok) {
         router.push("/app");
@@ -152,11 +141,13 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
     });
   };
 
+  const canProceedStep1 = !!selectedWorkshop && !loadingGroups && !isPending;
+
   return (
-    <div className="space-y-8 max-w-xl">
+    <div className="space-y-8 max-w-2xl">
       {/* Step indicator */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        {(["1", "2", "3", "4"] as const).map((s, i) => (
+        {(["1", "2", "3"] as const).map((s, i) => (
           <span key={s} className="flex items-center gap-2">
             <span
               className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
@@ -169,15 +160,16 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
             >
               {s}
             </span>
-            {i < 3 && <span className="w-6 h-px bg-border" />}
+            {i < 2 && <span className="w-6 h-px bg-border" />}
           </span>
         ))}
       </div>
 
-      {/* Step 1 — Workshop */}
+      {/* ── Step 1 — Sélectionner un atelier ── */}
       {step === 1 && (
         <div className="space-y-4">
           <h2 className="text-base font-semibold">Sélectionner un atelier</h2>
+
           <div className="space-y-2">
             {workshops.map((w) => (
               <button
@@ -190,78 +182,51 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
                     : "border-border hover:border-primary/40"
                 }`}
               >
-                <div className="font-medium">{w.nom}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {w.typeNom && <span>{w.typeNom} · </span>}
-                  {w.seancesCount} séance{w.seancesCount > 1 ? "s" : ""} · {w.durationMin} min
+                <div className="flex items-start justify-between gap-4">
+                  {/* Infos atelier */}
+                  <div>
+                    <div className="font-medium">{w.nom}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {w.typeNom && <span>{w.typeNom} · </span>}
+                      {w.seancesCount} séance{w.seancesCount > 1 ? "s" : ""} · {w.durationMin} min
+                    </div>
+                  </div>
+
+                  {/* Prestataires requis */}
+                  {w.defaultRoles.length > 0 && (
+                    <div className="text-right shrink-0">
+                      <div className="text-xs text-muted-foreground mb-1">Prestataire(s)</div>
+                      <div className="flex flex-wrap justify-end gap-1">
+                        {w.defaultRoles.map((r, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border"
+                            style={r.couleur ? { borderColor: r.couleur, color: r.couleur } : undefined}
+                          >
+                            {r.nom}
+                            {r.isOptional && <span className="opacity-60">(opt.)</span>}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </button>
             ))}
           </div>
-          <Button
-            onClick={handleNextToStep2}
-            disabled={!selectedWorkshop || loadingGroups || isPending}
-          >
+
+          <Button onClick={handleNextToStep2} disabled={!canProceedStep1}>
             {loadingGroups ? "Chargement…" : "Suivant"}
           </Button>
         </div>
       )}
 
-      {/* Step 2 — Role group */}
-      {step === 2 && selectedWorkshop && (
+      {/* ── Step 2 — Rôles pour cette séance ── */}
+      {step === 2 && selectedGroup && (
         <div className="space-y-4">
-          <h2 className="text-base font-semibold">Choisir la configuration de rôles</h2>
-          {roleGroups.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucun groupe de rôles défini pour ce type d&apos;atelier.</p>
-          ) : (
-            <div className="space-y-2">
-              {roleGroups.map((g) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  onClick={() => handleSelectGroup(g)}
-                  className={`w-full text-left rounded-lg border px-4 py-3 transition-colors ${
-                    selectedGroup?.id === g.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <div className="font-medium">{g.label}</div>
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {g.workshopRoleSlots.map((s) => (
-                      <Badge
-                        key={s.id}
-                        variant="outline"
-                        style={s.couleur ? { borderColor: s.couleur, color: s.couleur } : undefined}
-                        className="text-xs"
-                      >
-                        {s.metier.nom}
-                        {s.isOptional && " (opt.)"}
-                      </Badge>
-                    ))}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep(1)}>Retour</Button>
-            <Button
-              onClick={() => setStep(3)}
-              disabled={!selectedGroup && roleGroups.length > 0}
-            >
-              Suivant
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 3 — Slots */}
-      {step === 3 && selectedGroup && (
-        <div className="space-y-4">
-          <h2 className="text-base font-semibold">Rôles pour cette session</h2>
+          <h2 className="text-base font-semibold">Rôles pour cette séance</h2>
           <p className="text-sm text-muted-foreground">
-            Les rôles requis sont pré-cochés. Décochez si inutile. Cochez les optionnels si besoin.
+            Les rôles requis sont pré-cochés. Décochez si inutile. Gardez coché si besoin du prestataire.
           </p>
           <div className="space-y-3">
             {selectedGroup.workshopRoleSlots.map((slot) => (
@@ -284,29 +249,80 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
               </div>
             ))}
           </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep(2)}>Retour</Button>
-            <Button onClick={() => setStep(4)} disabled={checkedSlotIds.size === 0}>
+            <Button variant="outline" onClick={() => setStep(1)}>Retour</Button>
+            <Button onClick={handleNextToStep3} disabled={checkedSlotIds.size === 0}>
               Suivant
             </Button>
           </div>
         </div>
       )}
 
-      {/* Step 4 — Info + dates */}
-      {step === 4 && selectedWorkshop && (
+      {/* ── Step 3 — Informations ── */}
+      {step === 3 && selectedWorkshop && (
         <div className="space-y-6">
-          <h2 className="text-base font-semibold">Informations et dates</h2>
+          <h2 className="text-base font-semibold">Informations</h2>
 
+          {/* Nom de l'atelier pré-rempli */}
           <div className="space-y-2">
-            <Label htmlFor="nom">Nom du groupe / public</Label>
+            <Label htmlFor="nom">Nom de l&apos;atelier / public</Label>
             <Input
               id="nom"
               value={nom}
               onChange={(e) => setNom(e.target.value)}
-              placeholder="ex. Groupe parents — Session 1"
+              placeholder="ex. Groupe parents"
             />
           </div>
+
+          {/* Numéro de session */}
+          <div className="space-y-2">
+            <Label htmlFor="sessionNumber">Numéro de la session</Label>
+            <Input
+              id="sessionNumber"
+              type="number"
+              min={1}
+              max={999}
+              value={sessionNumber}
+              onChange={(e) => setSessionNumber(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-32"
+            />
+          </div>
+
+          {/* Numéro de la séance */}
+          <div className="space-y-2">
+            <Label htmlFor="seanceCount">Numéro de la séance</Label>
+            <Input
+              id="seanceCount"
+              type="number"
+              min={1}
+              max={selectedWorkshop.seancesCount || 20}
+              value={seanceCount}
+              onChange={(e) => setSeanceCount(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-32"
+            />
+            <p className="text-xs text-muted-foreground">
+              Sur {selectedWorkshop.seancesCount} séance{selectedWorkshop.seancesCount > 1 ? "s" : ""} prévues pour cet atelier.
+            </p>
+          </div>
+
+          {/* Compteur séances et liste désactivés — les dates seront fixées via le calendrier des dispos prestataires
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Séances ({seanceCount} / {selectedWorkshop.seancesCount} prévues)</Label>
+              <div className="flex gap-1">
+                <Button type="button" variant="outline" size="sm" onClick={() => setSeanceCount((n) => Math.max(1, n - 1))} disabled={seanceCount <= 1}>−</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setSeanceCount((n) => Math.min(20, n + 1))} disabled={seanceCount >= 20}>+</Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Les dates seront fixées lors du choix des disponibilités prestataires.</p>
+            <div className="space-y-1">
+              {Array.from({ length: seanceCount }, (_, i) => (
+                <div key={i} className="rounded-md border px-3 py-2 text-sm text-muted-foreground">Séance {i + 1} — date à fixer</div>
+              ))}
+            </div>
+          </div>
+          */}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (optionnel)</Label>
@@ -318,64 +334,10 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
             />
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>
-                Séances ({dates.length} / {selectedWorkshop.seancesCount} prévues)
-              </Label>
-              <div className="flex gap-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => syncDatesCount(dates.length - 1)}
-                  disabled={dates.length <= 1}
-                >
-                  −
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => syncDatesCount(dates.length + 1)}
-                  disabled={dates.length >= 20}
-                >
-                  +
-                </Button>
-              </div>
-            </div>
-
-            {dates.map((d, i) => (
-              <div key={i} className="rounded-lg border p-3 space-y-2">
-                <div className="text-sm font-medium text-muted-foreground">
-                  Séance {i + 1}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Début</Label>
-                    <Input
-                      type="datetime-local"
-                      value={d.startAt}
-                      onChange={(e) => updateDate(i, "startAt", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Fin</Label>
-                    <Input
-                      type="datetime-local"
-                      value={d.endAt}
-                      onChange={(e) => updateDate(i, "endAt", e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep(3)}>Retour</Button>
+            <Button variant="outline" onClick={() => setStep(2)}>Retour</Button>
             <Button onClick={handleSubmit} disabled={isPending}>
               {isPending ? "Création…" : "Créer la session"}
             </Button>

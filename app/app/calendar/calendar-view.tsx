@@ -54,6 +54,7 @@ function groupByDay(occurrences: OccurrenceCalendarRow[], monday: Date) {
     day.setDate(monday.getDate() + i);
     const label = day.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
     const items = occurrences.filter((o) => {
+      if (!o.startAt) return false;
       const d = new Date(o.startAt);
       return d.getFullYear() === day.getFullYear() && d.getMonth() === day.getMonth() && d.getDate() === day.getDate();
     });
@@ -103,9 +104,9 @@ export function CalendarView({ occurrences }: Props) {
                     className="flex items-center gap-3 border rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-accent transition-colors"
                   >
                     <span className="text-muted-foreground w-24 shrink-0">
-                      {new Date(occ.startAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      {occ.startAt ? new Date(occ.startAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—"}
                       {" – "}
-                      {new Date(occ.endAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      {occ.endAt ? new Date(occ.endAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—"}
                     </span>
                     <span className="flex-1 font-medium">{occ.sessionNom}</span>
                     <Badge variant={STATUT_VARIANT[occ.statut] ?? "outline"}>

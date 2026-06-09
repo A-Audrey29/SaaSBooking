@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq, and, isNull, gte, lte, asc } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, gte, lte, asc } from "drizzle-orm";
 import { db, schema } from "@/server/db/client";
 
 /**
@@ -42,6 +42,8 @@ export async function getMyConfirmedBookings(providerId: string, from: Date, to:
       and(
         eq(schema.ticketSlot.providerId, providerId),
         eq(schema.ticketSlot.statut, "confirmed"),
+        isNotNull(schema.occurrence.startAt),
+        isNotNull(schema.occurrence.endAt),
         gte(schema.occurrence.startAt, from),
         lte(schema.occurrence.startAt, to),
         isNull(schema.ticketSlot.deletedAt),
@@ -71,6 +73,8 @@ export async function getAllMyConfirmedBookings(providerId: string) {
       and(
         eq(schema.ticketSlot.providerId, providerId),
         eq(schema.ticketSlot.statut, "confirmed"),
+        isNotNull(schema.occurrence.startAt),
+        isNotNull(schema.occurrence.endAt),
         isNull(schema.ticketSlot.deletedAt),
         isNull(schema.ticket.deletedAt),
         isNull(schema.occurrence.deletedAt)

@@ -60,16 +60,13 @@ export async function createSessionGroup(
         })
         .returning({ id: schema.sessionGroup.id });
 
-      for (let i = 0; i < validated.dates.length; i++) {
-        const { startAt, endAt } = validated.dates[i];
-
+      // Crée N occurrences sans date — les dates seront fixées via le calendrier des dispos
+      for (let i = 0; i < validated.seanceCount; i++) {
         const [occ] = await tx
           .insert(schema.occurrence)
           .values({
             sessionGroupId: sg.id,
             index: i + 1,
-            startAt: new Date(startAt),
-            endAt: new Date(endAt),
             statut: "planned",
             workshopRoleGroupId: validated.workshopRoleGroupId,
           })
@@ -111,7 +108,8 @@ export async function createSessionGroup(
         workshopId: validated.workshopId,
         workshopRoleGroupId: validated.workshopRoleGroupId,
         nom: validated.nom,
-        occurrencesCount: validated.dates.length,
+        sessionNumber: validated.sessionNumber,
+        seanceCount: validated.seanceCount,
       });
 
       return sg.id;

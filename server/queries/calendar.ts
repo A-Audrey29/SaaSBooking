@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq, isNull, and, gte, lte, asc } from "drizzle-orm";
+import { eq, isNull, isNotNull, and, gte, lte, asc } from "drizzle-orm";
 import { db, schema } from "@/server/db/client";
 
 export async function getOccurrencesForCentre(centreId: string, from: Date, to: Date) {
@@ -18,6 +18,8 @@ export async function getOccurrencesForCentre(centreId: string, from: Date, to: 
     .where(
       and(
         eq(schema.sessionGroup.centreId, centreId),
+        isNotNull(schema.occurrence.startAt),
+        isNotNull(schema.occurrence.endAt),
         gte(schema.occurrence.startAt, from),
         lte(schema.occurrence.startAt, to),
         isNull(schema.occurrence.deletedAt),

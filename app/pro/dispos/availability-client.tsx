@@ -95,7 +95,10 @@ export function AvailabilityClient({ initialAvailabilities, initialBookings }: P
   );
 
   const bookings = useMemo(
-    () => initialBookings.map((b) => ({ ...b, start: new Date(b.startAt), end: new Date(b.endAt) })),
+    // Les bookings confirmés ont toujours des dates (filtrés isNotNull côté query)
+    () => initialBookings
+      .filter((b): b is typeof b & { startAt: Date; endAt: Date } => b.startAt !== null && b.endAt !== null)
+      .map((b) => ({ ...b, start: new Date(b.startAt), end: new Date(b.endAt) })),
     [initialBookings]
   );
 

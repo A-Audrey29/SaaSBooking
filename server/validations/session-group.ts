@@ -5,16 +5,10 @@ export const CreateSessionGroupSchema = z.object({
   workshopRoleGroupId: z.string().uuid(),
   checkedSlotIds: z.array(z.string().uuid()).min(1, "Au moins un rôle requis"),
   nom: z.string().min(1).max(200).trim(),
+  sessionNumber: z.number().int().min(1).max(999),
+  seanceCount: z.number().int().min(1).max(20),
   notes: z.string().max(1000).trim().optional(),
-  dates: z
-    .array(
-      z.object({
-        startAt: z.string().datetime(),
-        endAt: z.string().datetime(),
-      })
-    )
-    .min(1, "Au moins une séance requise")
-    .max(20),
+  // Les dates seront fixées lors du choix des disponibilités prestataires
 });
 
 export type CreateSessionGroupInput = z.infer<typeof CreateSessionGroupSchema>;

@@ -76,7 +76,9 @@ export async function createDateException(
       (a) =>
         a.kind === "available" &&
         overlaps(a.startAt, a.endAt, dayStartUtc, dayEndUtc) &&
-        !bookings.some((b) => overlaps(a.startAt, a.endAt, b.startAt, b.endAt))
+        !bookings
+          .filter((b): b is typeof b & { startAt: Date; endAt: Date } => b.startAt !== null && b.endAt !== null)
+          .some((b) => overlaps(a.startAt, a.endAt, b.startAt, b.endAt))
     );
 
     if (toDelete.length > 0) {
@@ -160,7 +162,9 @@ export async function createRecurringAvailabilities(
   const toDelete = existing.filter(
     (a) =>
       a.kind === "available" &&
-      !bookings.some((b) => overlaps(a.startAt, a.endAt, b.startAt, b.endAt))
+      !bookings
+        .filter((b): b is typeof b & { startAt: Date; endAt: Date } => b.startAt !== null && b.endAt !== null)
+        .some((b) => overlaps(a.startAt, a.endAt, b.startAt, b.endAt))
   );
 
   if (toDelete.length > 0) {

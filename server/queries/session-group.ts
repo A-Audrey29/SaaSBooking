@@ -4,7 +4,7 @@ import { eq, isNull, and, count, min, sql } from "drizzle-orm";
 import { db, schema } from "@/server/db/client";
 
 export async function listWorkshopsForCentre(centreId: string) {
-  return db
+  const workshops = await db
     .select({
       id: schema.workshop.id,
       nom: schema.workshop.nom,
@@ -29,7 +29,46 @@ export async function listWorkshopsForCentre(centreId: string) {
       )
     )
     .orderBy(schema.workshop.nom);
+
+  // Charger les rôles du premier groupe pour chaque typeId distinct
+  // pour les afficher dans les cards sans interaction
+  const typeIds = [...new Set(workshops.map((w) => w.typeId).filter(Boolean))] as string[];
+
+  const rolesByType = new Map<string, { nom: string; isOptional: boolean; couleur: string | null }[]>();
+
+  if (typeIds.length > 0) {
+    for (const typeId of typeIds) {
+      const groups = await db.query.workshopRoleGroup.findMany({
+        where: (wrg, { eq, isNull, and }) =>
+          and(eq(wrg.workshopTypeId, typeId), isNull(wrg.deletedAt)),
+        orderBy: (wrg, { asc }) => [asc(wrg.ordre)],
+        limit: 1,
+        with: {
+          workshopRoleSlots: {
+            where: (wrs, { isNull }) => isNull(wrs.deletedAt),
+            orderBy: (wrs, { asc }) => [asc(wrs.ordre)],
+            with: { metier: { columns: { nom: true } } },
+          },
+        },
+      });
+
+      if (groups[0]) {
+        rolesByType.set(typeId, groups[0].workshopRoleSlots.map((s) => ({
+          nom: s.metier.nom,
+          isOptional: s.isOptional,
+          couleur: s.couleur,
+        })));
+      }
+    }
+  }
+
+  return workshops.map((w) => ({
+    ...w,
+    defaultRoles: w.typeId ? (rolesByType.get(w.typeId) ?? []) : [],
+  }));
 }
+
+export type WorkshopForCentre = Awaited<ReturnType<typeof listWorkshopsForCentre>>[number];
 
 export async function getRoleGroupsForWorkshopType(workshopTypeId: string) {
   const groups = await db.query.workshopRoleGroup.findMany({

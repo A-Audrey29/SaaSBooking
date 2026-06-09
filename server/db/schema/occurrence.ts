@@ -14,8 +14,9 @@ export const occurrence = pgTable(
       .notNull()
       .references(() => sessionGroup.id, { onDelete: "cascade" }),
     index: integer("index").notNull(), // 1, 2, 3... within session group
-    startAt: timestamp("start_at", { mode: "date", withTimezone: true }).notNull(), // UTC
-    endAt: timestamp("end_at", { mode: "date", withTimezone: true }).notNull(), // UTC
+    // Nullable : dates fixées lors du choix des disponibilités prestataires
+    startAt: timestamp("start_at", { mode: "date", withTimezone: true }),
+    endAt: timestamp("end_at", { mode: "date", withTimezone: true }),
     lieu: text("lieu"),
     salle: text("salle"),
     notes: text("notes"),
