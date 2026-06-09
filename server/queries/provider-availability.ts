@@ -31,6 +31,25 @@ export async function getMyAvailabilities(providerId: string) {
 
 export type ProviderAvailabilityRow = Awaited<ReturnType<typeof getMyAvailabilities>>[number];
 
+/** Toutes les dispos actives du provider, sans filtre date. */
+export async function getAllMyAvailabilities(providerId: string) {
+  return db
+    .select({
+      id: schema.providerAvailability.id,
+      startAt: schema.providerAvailability.startAt,
+      endAt: schema.providerAvailability.endAt,
+      kind: schema.providerAvailability.kind,
+    })
+    .from(schema.providerAvailability)
+    .where(
+      and(
+        eq(schema.providerAvailability.providerId, providerId),
+        isNull(schema.providerAvailability.deletedAt)
+      )
+    )
+    .orderBy(asc(schema.providerAvailability.startAt));
+}
+
 /**
  * Créneaux d'un prestataire chevauchant la fenêtre [from, to].
  * (startAt < to AND endAt > from)

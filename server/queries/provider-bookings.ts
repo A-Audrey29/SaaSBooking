@@ -56,3 +56,24 @@ export async function getMyConfirmedBookings(providerId: string, from: Date, to:
 }
 
 export type ProviderBookingRow = Awaited<ReturnType<typeof getMyConfirmedBookings>>[number];
+
+/** Toutes les interventions confirmées du provider, sans filtre date. Utilisé pour protéger les dispos lors d'un purge global. */
+export async function getAllMyConfirmedBookings(providerId: string) {
+  return db
+    .select({
+      startAt: schema.occurrence.startAt,
+      endAt: schema.occurrence.endAt,
+    })
+    .from(schema.ticketSlot)
+    .innerJoin(schema.ticket, eq(schema.ticketSlot.ticketId, schema.ticket.id))
+    .innerJoin(schema.occurrence, eq(schema.ticket.occurrenceId, schema.occurrence.id))
+    .where(
+      and(
+        eq(schema.ticketSlot.providerId, providerId),
+        eq(schema.ticketSlot.statut, "confirmed"),
+        isNull(schema.ticketSlot.deletedAt),
+        isNull(schema.ticket.deletedAt),
+        isNull(schema.occurrence.deletedAt)
+      )
+    );
+}

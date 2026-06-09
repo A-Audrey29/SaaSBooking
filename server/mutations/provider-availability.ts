@@ -6,8 +6,12 @@ import type { ServerContext } from "@/server/context/server-context";
 import {
   resolveProviderFromUser,
   getMyAvailabilitiesInRange,
+  getAllMyAvailabilities,
 } from "@/server/queries/provider-availability";
-import { getMyConfirmedBookings } from "@/server/queries/provider-bookings";
+import {
+  getMyConfirmedBookings,
+  getAllMyConfirmedBookings,
+} from "@/server/queries/provider-bookings";
 import type {
   CreateAvailabilityInput,
   DeleteAvailabilityInput,
@@ -142,20 +146,21 @@ export async function createRecurringAvailabilities(
   const prov = await resolveProviderFromUser(ctx.userId);
   if (!prov) throw new Error("Aucun prestataire associé à ce compte");
 
-  const fromUtc = gpDateTimeToUtc(input.from, 0, 0);
-  const toUtc = gpDateTimeToUtc(addDaysISO(input.to, 1), 0, 0);
-
+  // Purge global : supprimer TOUTES les dispos 'available' du provider non protégées
+  // par un booking, quelle que soit la date. La fenêtre [from, to] devient source de
+  // vérité — ce qui déborde est effacé, pas seulement ce qui est dans la fenêtre.
   const [existing, bookings] = await Promise.all([
-    getMyAvailabilitiesInRange(prov.id, fromUtc, toUtc),
-    getMyConfirmedBookings(prov.id, fromUtc, toUtc),
+    getAllMyAvailabilities(prov.id),
+    getAllMyConfirmedBookings(prov.id),
   ]);
 
-  // Une dispo est "protégée" si elle chevauche au moins un booking confirmé.
   const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
     aStart < bEnd && aEnd > bStart;
 
   const toDelete = existing.filter(
-    (a) => !bookings.some((b) => overlaps(a.startAt, a.endAt, b.startAt, b.endAt))
+    (a) =>
+      a.kind === "available" &&
+      !bookings.some((b) => overlaps(a.startAt, a.endAt, b.startAt, b.endAt))
   );
 
   if (toDelete.length > 0) {
