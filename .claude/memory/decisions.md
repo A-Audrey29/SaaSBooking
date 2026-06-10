@@ -15,6 +15,8 @@ Schema:
 
 | ID | Date | Domaine | Décision |
 |----|------|---------|----------|
+| BDR-019 | 2026-06-10 | Référent/UX | Calendrier dispos : vue mois + filtres multi-métiers/atelier |
+| BDR-020 | 2026-06-10 | Sécurité/Git | environment.md : placeholders génériques, jamais hostname réel |
 | BDR-017 | 2026-06-09 | Référent/Dispo | Prestataires non contraints par centre en V1 |
 | BDR-018 | 2026-06-09 | Référent/UX | Redirect post-création séance → calendrier dispos filtré |
 | BDR-001 | 2026-05-11 | Auth | Better Auth (magic link V1) |
@@ -202,9 +204,30 @@ Schema:
 ### BDR-018: Redirect post-création séance → calendrier dispos filtré par métier
 - **Date**: 2026-06-09
 - **Title**: UX wizard séance → disponibilités
-- **Decision**: Après "Créer la séance", redirect vers `/app/availability?metiers=X,Y` avec les noms de métiers cochés en step 2. La page availability filtre automatiquement les prestataires et pré-sélectionne le filtre métier dans la légende.
+- **Decision**: Après "Créer la séance", redirect vers `/app/availability?metiers=X,Y&sessionGroupId=Z` avec les noms de métiers cochés en step 2.
 - **Why**: Séquence naturelle — créer la séance puis trouver des prestataires disponibles pour fixer les dates. Évite de naviguer manuellement vers Disponibilités et de re-sélectionner les métiers.
 - **Alternatives**: Redirect vers `/app` (liste séances) — rejeté, coupe le flux logique. Intégrer le choix de créneau dans le wizard (step 4) — rejeté, trop complexe pour V1, les données dispos ne sont pas encore chargées.
+- **Status**: active — **mis à jour 2026-06-10 par BDR-019** : `metiers` n'est plus utilisé pour pré-filtrer la grille (cf BDR-019), uniquement affiché comme badge informatif "Filtré sur : X".
+
+### BDR-019: Calendrier dispos — vue mois + filtres multi-métiers/atelier
+- **Date**: 2026-06-10
+- **Title**: Évolution UX calendrier référent (`/app/availability`)
+- **Decision**:
+  - Vue mois ajoutée (mini-grille 6 semaines, points colorés par métier par jour, clic jour → bascule vue semaine sur cette semaine).
+  - Filtre métier devient multi-sélection : `filterMetiers: Set<string>`, toggle via clic sur badges légende. Set vide = tous les métiers.
+  - Nouveau filtre "atelier" (`<select>`) : sélectionner un atelier pré-remplit `filterMetiers` avec les métiers de ses `workshopRoleSlots` (pas de nouvelle requête DB, réutilise `listWorkshopsForCentre`).
+  - `getProvidersDisposForCentre` appelée SANS filtre métier côté serveur — tous les prestataires sont chargés, filtrage 100% côté client. État initial = aucun filtre actif (Set vide), même si `?metiers=X,Y` est présent dans l'URL (ce paramètre ne sert plus que pour le badge "Filtré sur").
+  - Plage de dates chargée élargie à ±6 semaines (était ±4/+5) pour couvrir la navigation mois.
+- **Why**: Filtrer côté serveur par `metierNoms` issus de l'URL cassait "Tous les ateliers" — les prestataires hors filtre n'étaient jamais renvoyés au client, donc impossibles à réafficher en changeant le filtre client. Charger tout côté serveur + filtrer côté client est plus simple et robuste (1 seule requête, filtre instantané sans rechargement).
+- **Alternatives**: Refetch serveur à chaque changement de filtre — rejeté, complexité + latence inutiles pour un volume de prestataires V1 faible. RLS/filtre atelier→sessionGroup en DB — rejeté (sur-ingénierie, BDR-017 dit pas de lien atelier↔prestataire en V1).
+- **Status**: active
+
+### BDR-020: Fichiers `.claude/memory/*.md` — pas de secrets, placeholders génériques
+- **Date**: 2026-06-10
+- **Title**: Hygiène sécurité fichiers mémoire versionnés
+- **Decision**: `environment.md` (et tout fichier memory commité) ne doit contenir aucune valeur réelle d'environnement (hostname DB, clés, secrets) — uniquement des placeholders type `<user>`, `<host>.neon.tech`, `<db>`.
+- **Why**: `environment.md` est tracké dans git et pushé sur `origin/main` (repo distant). Le hostname réel du projet Neon (`ep-hidden-wildflower-...`) était exposé en clair depuis le commit `888be3c` — identifiant de projet sensible même sans password.
+- **Alternatives**: Ajouter `.claude/memory/` au `.gitignore` — rejeté pour l'instant, ces fichiers servent de doc d'équipe/mémoire projet et sont utiles versionnés ; le risque est traité en gardant leur contenu non sensible par construction.
 - **Status**: active
 
 ### BDR-007: dev-login route à supprimer avant prod
