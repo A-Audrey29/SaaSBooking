@@ -139,10 +139,10 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
         notes: notes.trim() || undefined,
       });
       if (result.ok) {
-        const params = metierNoms.length > 0
-          ? `?metiers=${encodeURIComponent(metierNoms.join(","))}`
-          : "";
-        router.push(`/app/availability${params}`);
+        const p = new URLSearchParams();
+        if (metierNoms.length > 0) p.set("metiers", metierNoms.join(","));
+        p.set("sessionGroupId", result.id);
+        router.push(`/app/availability?${p.toString()}`);
       } else {
         setError(result.error);
       }
