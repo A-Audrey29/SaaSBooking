@@ -51,7 +51,7 @@ Asanblé`;
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
-      from: "noreply@asanble.fr",
+      from: process.env.RESEND_FROM_EMAIL ?? "noreply@resapresta.feves971.fr",
       to,
       subject: "Votre accès à Asanblé — Configurez votre mot de passe",
       text: body,
