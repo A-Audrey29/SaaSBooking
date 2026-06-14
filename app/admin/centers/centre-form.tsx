@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,8 +43,12 @@ export function CentreForm({
   const [isPending, startTransition] = useTransition();
   const isEdit = Boolean(defaultValues?.id);
 
-  const form = useForm<CreateCentreInput | UpdateCentreInput>({
-    resolver: zodResolver(isEdit ? UpdateCentreSchema : CreateCentreSchema),
+  type FormValues = CreateCentreInput & { id?: string };
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(
+      isEdit ? UpdateCentreSchema : CreateCentreSchema
+    ) as Resolver<FormValues>,
     defaultValues: {
       id: defaultValues?.id,
       nom: defaultValues?.nom ?? "",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,7 +66,7 @@ function CreateProjectForm({ centres, onSuccess, onCancel }: SharedProps) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<CreateProjectInput>({
-    resolver: zodResolver(CreateProjectSchema),
+    resolver: zodResolver(CreateProjectSchema) as Resolver<CreateProjectInput>,
     defaultValues: {
       centreId: "",
       nom: "",
@@ -214,7 +214,7 @@ function EditProjectForm({ project, centres, onSuccess, onCancel }: EditProps) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<UpdateProjectInput>({
-    resolver: zodResolver(UpdateProjectSchema),
+    resolver: zodResolver(UpdateProjectSchema) as Resolver<UpdateProjectInput>,
     defaultValues: {
       id: project.id,
       nom: project.nom,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,9 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<UpdateMyProviderProfileInput>({
-    resolver: zodResolver(UpdateMyProviderProfileSchema),
+    resolver: zodResolver(
+      UpdateMyProviderProfileSchema
+    ) as Resolver<UpdateMyProviderProfileInput>,
     defaultValues,
   });
 

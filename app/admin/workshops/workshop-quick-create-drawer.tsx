@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,9 @@ export function WorkshopQuickCreateDrawer({
   const [selectedMetierIds, setSelectedMetierIds] = useState<string[]>([]);
 
   const form = useForm<QuickCreateWorkshopTypeInput>({
-    resolver: zodResolver(QuickCreateWorkshopTypeSchema),
+    resolver: zodResolver(
+      QuickCreateWorkshopTypeSchema
+    ) as Resolver<QuickCreateWorkshopTypeInput>,
     defaultValues: {
       centreId: null,
       code: "",

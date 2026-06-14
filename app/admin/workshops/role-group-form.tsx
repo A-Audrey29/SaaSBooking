@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +44,9 @@ export function RoleGroupForm({
   const isEdit = Boolean(defaultValues?.id);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(isEdit ? UpdateRoleGroupSchema : CreateRoleGroupSchema),
+    resolver: zodResolver(
+      isEdit ? UpdateRoleGroupSchema : CreateRoleGroupSchema
+    ) as Resolver<FormValues>,
     defaultValues: {
       id: defaultValues?.id,
       workshopTypeId,
