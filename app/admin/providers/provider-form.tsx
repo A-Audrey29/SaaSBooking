@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,7 +66,7 @@ function CreateProviderForm({ metiers, onSuccess, onCancel }: SharedProps) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<CreateProviderInput>({
-    resolver: zodResolver(CreateProviderSchema),
+    resolver: zodResolver(CreateProviderSchema) as Resolver<CreateProviderInput>,
     defaultValues: {
       nom: "",
       email: "",
@@ -220,7 +220,7 @@ function EditProviderForm({ provider, metiers, onSuccess, onCancel }: EditProps)
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<UpdateProviderInput>({
-    resolver: zodResolver(UpdateProviderSchema),
+    resolver: zodResolver(UpdateProviderSchema) as Resolver<UpdateProviderInput>,
     defaultValues: {
       id: provider.id,
       nom: provider.nom,

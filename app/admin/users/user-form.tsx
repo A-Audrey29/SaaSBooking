@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,7 +63,7 @@ function CreateUserForm({ centres, onSuccess, onCancel }: SharedProps) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<CreateUserInput>({
-    resolver: zodResolver(CreateUserSchema),
+    resolver: zodResolver(CreateUserSchema) as Resolver<CreateUserInput>,
     defaultValues: {
       email: "",
       name: "",
@@ -199,7 +199,7 @@ function EditUserForm({ user, centres, onSuccess, onCancel }: EditProps) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<UpdateUserInput>({
-    resolver: zodResolver(UpdateUserSchema),
+    resolver: zodResolver(UpdateUserSchema) as Resolver<UpdateUserInput>,
     defaultValues: {
       id: user.id,
       role: user.role as UpdateUserInput["role"],
