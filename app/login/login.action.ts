@@ -43,18 +43,27 @@ export async function login(
 
   // Forward Set-Cookie headers from Better Auth to the Next.js response
   const cookieStore = await cookies();
-  for (const raw of response.headers.getSetCookie()) {
+  const rawCookies = response.headers.getSetCookie();
+  console.log("[login debug] Set-Cookie headers from Better Auth:", rawCookies);
+  for (const raw of rawCookies) {
     const nameValue = (raw.split(";")[0] ?? "").trim();
     const eq = nameValue.indexOf("=");
     if (eq === -1) continue;
     const name = nameValue.slice(0, eq).trim();
     const value = nameValue.slice(eq + 1).trim();
     if (!name) continue;
-    cookieStore.set(name, decodeURIComponent(value), { path: "/", httpOnly: true, sameSite: "lax" });
+    cookieStore.set(name, decodeURIComponent(value), {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+    console.log("[login debug] cookie set:", { name, secure: process.env.NODE_ENV === "production" });
   }
 
   // Read role from session to determine redirect
   const session = await auth.api.getSession({ headers: await headers() });
+  console.log("[login debug] session after set:", session ? { userId: session.user?.id, role: (session.user as { role?: string })?.role } : null);
   const role = (session?.user as { role?: string } | null)?.role ?? "referent";
 
   redirect(ROLE_REDIRECTS[role] ?? "/app");
