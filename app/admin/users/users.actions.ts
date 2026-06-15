@@ -94,7 +94,7 @@ export async function createUser(
       "code" in error &&
       error.code === "23505" &&
       "constraint" in error &&
-      error.constraint === "user_email_unique"
+      error.constraint === "user_email_unique_active"
     ) {
       return { ok: false, error: "Un utilisateur avec cet email existe déjà" };
     }

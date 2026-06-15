@@ -5,7 +5,8 @@
  * with our multi-tenant fields.
  */
 
-import { pgTable, uuid, timestamp, text, boolean } from "drizzle-orm/pg-core";
+import { pgTable, uuid, timestamp, text, boolean, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { centre } from "./centre";
 
 /**
@@ -13,20 +14,30 @@ import { centre } from "./centre";
  * centre_id: nullable for super_admin (sees all centres)
  * role: enum for authorization
  */
-export const user = pgTable("user", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("emailVerified").default(false),
-  name: text("name"),
-  image: text("image"),
-  // Multi-tenant extensions
-  centreId: uuid("centre_id").references(() => centre.id, { onDelete: "set null" }), // nullable for super_admin
-  role: text("role").notNull(), // CHECK constraint DB: super_admin | project_admin | referent | provider
-  passwordSet: boolean("password_set").notNull().default(false),
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-  deletedAt: timestamp("deleted_at", { mode: "date", withTimezone: true }), // soft delete
-});
+export const user = pgTable(
+  "user",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    emailVerified: boolean("emailVerified").default(false),
+    name: text("name"),
+    image: text("image"),
+    // Multi-tenant extensions
+    centreId: uuid("centre_id").references(() => centre.id, { onDelete: "set null" }), // nullable for super_admin
+    role: text("role").notNull(), // CHECK constraint DB: super_admin | project_admin | referent | provider
+    passwordSet: boolean("password_set").notNull().default(false),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at", { mode: "date", withTimezone: true }), // soft delete
+  },
+  (table) => ({
+    // Unique email parmi les users actifs uniquement : permet de recréer
+    // un user avec le même email après soft delete.
+    emailUniqueActive: uniqueIndex("user_email_unique_active")
+      .on(table.email)
+      .where(sql`${table.deletedAt} IS NULL`),
+  })
+);
 
 /**
  * Session table - managed by Better Auth.
