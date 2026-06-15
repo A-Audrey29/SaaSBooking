@@ -20,7 +20,7 @@ export async function sendInvitationEmail({
   inviterName,
   token,
 }: SendInvitationEmailParams): Promise<SendInvitationEmailResult> {
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const setupUrl = `${appUrl}/setup-password?token=${token}`;
   const displayName = name ?? to;
 
@@ -58,9 +58,8 @@ Asanblé`;
     });
     return { sent: true };
   } catch (error) {
-    return {
-      sent: false,
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    };
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    console.error("[send-invitation] Échec envoi Resend", { to, error: message });
+    return { sent: false, error: message };
   }
 }

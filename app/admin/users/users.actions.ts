@@ -79,6 +79,9 @@ export async function createUser(
         token,
       });
       emailSent = result.sent;
+      if (!result.sent && result.error) {
+        console.error("Failed to send invitation email:", result.error);
+      }
     } catch (emailError) {
       console.error("Failed to send invitation email:", emailError);
     }
