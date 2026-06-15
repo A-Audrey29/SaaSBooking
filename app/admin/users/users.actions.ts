@@ -79,6 +79,9 @@ export async function createUser(
         token,
       });
       emailSent = result.sent;
+      if (!result.sent && result.error) {
+        console.error("Failed to send invitation email:", result.error);
+      }
     } catch (emailError) {
       console.error("Failed to send invitation email:", emailError);
     }
@@ -86,6 +89,15 @@ export async function createUser(
     revalidatePath("/admin/users");
     return { ok: true, emailSent };
   } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "23505" &&
+      "constraint" in error &&
+      error.constraint === "user_email_unique"
+    ) {
+      return { ok: false, error: "Un utilisateur avec cet email existe déjà" };
+    }
     return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
   }
 }
