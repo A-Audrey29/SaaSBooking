@@ -18,7 +18,7 @@ import {
   type ResendInvitationInput,
   type SetupPasswordInput,
 } from "@/server/validations/user";
-import bcrypt from "bcryptjs";
+import { auth } from "@/server/auth/config";
 import { sendInvitationEmail } from "@/server/emails/send-invitation";
 
 // ---------------------------------------------------------------------------
@@ -270,7 +270,8 @@ export async function setupPassword(
   try {
     const validated = SetupPasswordSchema.parse(input);
     const now = new Date();
-    const hash = await bcrypt.hash(validated.password, 10);
+    const authContext = await auth.$context;
+    const hash = await authContext.password.hash(validated.password);
 
     const userId = await db.transaction(async (tx) => {
       const [invitation] = await tx
