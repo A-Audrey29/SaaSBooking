@@ -57,11 +57,6 @@ export function ProvidersClient({ providers, metiers }: ProvidersClientProps) {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const handleCreate = () => {
-    setSelectedProvider(null);
-    setSheetOpen(true);
-  };
-
   const handleEdit = (provider: Provider) => {
     setSelectedProvider(provider);
     setSheetOpen(true);
@@ -87,7 +82,6 @@ export function ProvidersClient({ providers, metiers }: ProvidersClientProps) {
     <div className="px-4 md:px-8 py-6 md:py-8 max-w-[1100px] mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Prestataires</h1>
-        <Button onClick={handleCreate}>+ Nouveau prestataire</Button>
       </div>
 
       <div className="border rounded-lg">
@@ -144,22 +138,13 @@ export function ProvidersClient({ providers, metiers }: ProvidersClientProps) {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent className="overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>
-              {selectedProvider ? "Modifier le prestataire" : "Nouveau prestataire"}
-            </SheetTitle>
+            <SheetTitle>Modifier le prestataire</SheetTitle>
           </SheetHeader>
           <div className="mt-6">
-            {selectedProvider ? (
+            {selectedProvider && (
               <ProviderForm
                 mode="edit"
                 provider={selectedProvider}
-                metiers={metiers}
-                onSuccess={handleSheetClose}
-                onCancel={handleSheetClose}
-              />
-            ) : (
-              <ProviderForm
-                mode="create"
                 metiers={metiers}
                 onSuccess={handleSheetClose}
                 onCancel={handleSheetClose}

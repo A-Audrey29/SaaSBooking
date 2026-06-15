@@ -6,46 +6,11 @@ import { db, schema } from "@/server/db/client";
 import { requireRole } from "@/server/context/server-context";
 import { logAudit } from "@/server/queries/audit";
 import {
-  CreateProviderSchema,
   UpdateProviderSchema,
   SoftDeleteProviderSchema,
-  type CreateProviderInput,
   type UpdateProviderInput,
   type SoftDeleteProviderInput,
 } from "@/server/validations/provider";
-
-export async function createProvider(
-  input: CreateProviderInput
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  try {
-    const ctx = await requireRole("super_admin");
-    const validated = CreateProviderSchema.parse(input);
-
-    await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(schema.provider)
-        .values({
-          nom: validated.nom,
-          email: validated.email,
-          telephone: validated.telephone ?? null,
-          ville: validated.ville ?? null,
-          metierId: validated.metierId ?? null,
-          bio: validated.bio ?? null,
-        })
-        .returning();
-
-      await logAudit(ctx, "create", "provider", created.id, null, {
-        nom: created.nom,
-        email: created.email,
-      });
-    });
-
-    revalidatePath("/admin/providers");
-    return { ok: true };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
-  }
-}
 
 export async function updateProvider(
   input: UpdateProviderInput

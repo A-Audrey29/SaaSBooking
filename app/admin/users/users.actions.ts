@@ -18,7 +18,7 @@ import {
   type ResendInvitationInput,
   type SetupPasswordInput,
 } from "@/server/validations/user";
-import bcrypt from "bcryptjs";
+import { auth } from "@/server/auth/config";
 import { sendInvitationEmail } from "@/server/emails/send-invitation";
 
 // ---------------------------------------------------------------------------
@@ -168,9 +168,13 @@ export async function softDeleteUser(
       }
 
       const now = new Date();
+      // Anonymise l'email pour libérer l'adresse réelle immédiatement et
+      // éviter que Better Auth (findUserByEmail, sans filtre deleted_at)
+      // ne retrouve une ligne soft-deleted au login.
+      const anonymizedEmail = `deleted-${validated.id}@deleted.local`;
       await tx
         .update(schema.user)
-        .set({ deletedAt: now, updatedAt: now })
+        .set({ email: anonymizedEmail, deletedAt: now, updatedAt: now })
         .where(eq(schema.user.id, validated.id));
 
       await logAudit(
@@ -266,7 +270,8 @@ export async function setupPassword(
   try {
     const validated = SetupPasswordSchema.parse(input);
     const now = new Date();
-    const hash = await bcrypt.hash(validated.password, 10);
+    const authContext = await auth.$context;
+    const hash = await authContext.password.hash(validated.password);
 
     const userId = await db.transaction(async (tx) => {
       const [invitation] = await tx

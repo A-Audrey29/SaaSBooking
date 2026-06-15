@@ -1,8 +1,8 @@
 "use server";
 
 import { and, eq, isNull } from "drizzle-orm";
-import bcrypt from "bcryptjs";
 import { db, schema } from "@/server/db/client";
+import { auth } from "@/server/auth/config";
 import { requireAuth } from "@/server/context/server-context";
 import { logAudit } from "@/server/queries/audit";
 import {
@@ -33,12 +33,16 @@ export async function changePassword(
         throw new Error("Aucun mot de passe défini sur ce compte");
       }
 
-      const valid = await bcrypt.compare(validated.currentPassword, account.password);
+      const authContext = await auth.$context;
+      const valid = await authContext.password.verify({
+        hash: account.password,
+        password: validated.currentPassword,
+      });
       if (!valid) {
         throw new Error("Mot de passe actuel incorrect");
       }
 
-      const hash = await bcrypt.hash(validated.newPassword, 10);
+      const hash = await authContext.password.hash(validated.newPassword);
 
       await tx
         .update(schema.account)
