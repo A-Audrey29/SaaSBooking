@@ -168,9 +168,13 @@ export async function softDeleteUser(
       }
 
       const now = new Date();
+      // Anonymise l'email pour libérer l'adresse réelle immédiatement et
+      // éviter que Better Auth (findUserByEmail, sans filtre deleted_at)
+      // ne retrouve une ligne soft-deleted au login.
+      const anonymizedEmail = `deleted-${validated.id}@deleted.local`;
       await tx
         .update(schema.user)
-        .set({ deletedAt: now, updatedAt: now })
+        .set({ email: anonymizedEmail, deletedAt: now, updatedAt: now })
         .where(eq(schema.user.id, validated.id));
 
       await logAudit(
