@@ -165,6 +165,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
   });
   const [sendError, setSendError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [dateConflictWarning, setDateConflictWarning] = useState<string | null>(null);
 
   const slotsToSend = useMemo(() => {
     if (!sessionGroup) return [];
@@ -343,9 +344,19 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
     const startAt = new Date(day);
     startAt.setHours(hour, 0, 0, 0);
-    const endAt = new Date(day);
-    endAt.setHours(hour + 1, 0, 0, 0);
+    const endAt = new Date(startAt);
+    endAt.setMinutes(endAt.getMinutes() + sessionGroup.durationMin);
 
+    // Toutes les occurrences partagent le même créneau — bloquer si date différente
+    const existingItem = cart.find((i) => i.metierNom !== provider.metierNom);
+    if (existingItem && existingItem.startAt.getTime() !== startAt.getTime()) {
+      setDateConflictWarning(
+        `Créneau différent de ${fmtTime(existingItem.startAt)} (${existingItem.startAt.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}). Toutes les occurrences doivent être au même créneau.`
+      );
+      return;
+    }
+
+    setDateConflictWarning(null);
     setCart((prev) => {
       // Remplacer si même métier déjà dans le panier
       const filtered = prev.filter((item) => item.metierNom !== provider.metierNom);
@@ -734,6 +745,12 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
               );
             })}
           </div>
+
+          {dateConflictWarning && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              {dateConflictWarning}
+            </p>
+          )}
 
           {sendError && <p className="text-xs text-destructive">{sendError}</p>}
 

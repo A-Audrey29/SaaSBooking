@@ -105,6 +105,7 @@ export interface CartOccurrence {
 export interface SessionGroupCart {
   id: string;
   nom: string;
+  durationMin: number;
   occurrences: CartOccurrence[];
   /** Métiers distincts requis (providerRole non-skipped) */
   requiredRoles: string[];
@@ -122,8 +123,14 @@ export async function getSessionGroupForCart(
   occurrenceId?: string
 ): Promise<SessionGroupCart | null> {
   const [sg] = await db
-    .select({ id: schema.sessionGroup.id, nom: schema.sessionGroup.nom, centreId: schema.sessionGroup.centreId })
+    .select({
+      id: schema.sessionGroup.id,
+      nom: schema.sessionGroup.nom,
+      centreId: schema.sessionGroup.centreId,
+      durationMin: schema.workshop.durationMin,
+    })
     .from(schema.sessionGroup)
+    .innerJoin(schema.workshop, eq(schema.sessionGroup.workshopId, schema.workshop.id))
     .where(and(eq(schema.sessionGroup.id, sessionGroupId), isNull(schema.sessionGroup.deletedAt)));
 
   if (!sg || sg.centreId !== centreId) return null;
@@ -195,7 +202,7 @@ export async function getSessionGroupForCart(
       )]
     : [];
 
-  return { id: sg.id, nom: sg.nom, occurrences, requiredRoles };
+  return { id: sg.id, nom: sg.nom, durationMin: sg.durationMin, occurrences, requiredRoles };
 }
 
 /**
