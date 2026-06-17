@@ -90,9 +90,46 @@ interface SlotBlock {
   providerNom: string;
   providerId: string;
   metierNom: string;
+  ville: string | null;
   color: string;
   columnIndex: number; // position dans la sous-colonne du jour
   columnCount: number; // nb total de colonnes affichées ce jour (≤ MAX_COLS - 1 si overflow)
+  isPending: boolean;  // segment hachuré (pending ±30min buffer)
+}
+
+/** Découpe une dispo [dispoStart, dispoEnd] en segments libres/pending autour des pendingIntervals. */
+function splitAvailability(
+  dispoStart: Date,
+  dispoEnd: Date,
+  pendingIntervals: { startAt: Date; endAt: Date }[]
+): { start: Date; end: Date; isPending: boolean }[] {
+  // Garder uniquement les intervals qui chevauchent la dispo, triés par startAt
+  const overlapping = pendingIntervals
+    .filter((pi) => pi.startAt < dispoEnd && pi.endAt > dispoStart)
+    .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+
+  if (overlapping.length === 0) {
+    return [{ start: dispoStart, end: dispoEnd, isPending: false }];
+  }
+
+  const segments: { start: Date; end: Date; isPending: boolean }[] = [];
+  let cursor = dispoStart;
+
+  for (const pi of overlapping) {
+    const pStart = pi.startAt < dispoStart ? dispoStart : pi.startAt;
+    const pEnd = pi.endAt > dispoEnd ? dispoEnd : pi.endAt;
+    if (cursor < pStart) {
+      segments.push({ start: cursor, end: pStart, isPending: false });
+    }
+    segments.push({ start: pStart, end: pEnd, isPending: true });
+    cursor = pEnd;
+  }
+
+  if (cursor < dispoEnd) {
+    segments.push({ start: cursor, end: dispoEnd, isPending: false });
+  }
+
+  return segments;
 }
 
 interface CartItem {
@@ -254,14 +291,28 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
         const hasOverflow = cols.length > MAX_COLS;
         const visibleCols = hasOverflow ? MAX_COLS - 1 : cols.length;
         if (colIdx >= visibleCols) continue; // hors limite affichage
-        result.push({
-          id: a.id, startAt: start, endAt: end, kind: a.kind,
-          providerNom: p.providerNom, providerId: p.providerId,
-          metierNom: p.metierNom, color,
-          columnIndex: colIdx,
-          // si overflow, on réserve 1 colonne pour le badge → denominator = MAX_COLS
-          columnCount: hasOverflow ? MAX_COLS : visibleCols,
-        });
+        const columnCount = hasOverflow ? MAX_COLS : visibleCols;
+        const segments = splitAvailability(start, end, p.pendingIntervals.map((pi) => ({
+          startAt: new Date(pi.startAt),
+          endAt: new Date(pi.endAt),
+        })));
+        for (let si = 0; si < segments.length; si++) {
+          const seg = segments[si];
+          result.push({
+            id: `${a.id}:${seg.isPending ? "pending" : "free"}:${si}`,
+            startAt: seg.start,
+            endAt: seg.end,
+            kind: a.kind,
+            providerNom: p.providerNom,
+            providerId: p.providerId,
+            metierNom: p.metierNom,
+            ville: p.ville ?? null,
+            color,
+            columnIndex: colIdx,
+            columnCount,
+            isPending: seg.isPending,
+          });
+        }
       }
     }
     return result;
@@ -280,13 +331,13 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
   // ── Popup : prestataires dispo sur la cellule cliquée ──────────────────────
 
-  function getProvidersForCell(day: Date, hour: number): { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null }[] {
+  function getProvidersForCell(day: Date, hour: number): { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null; isPending: boolean }[] {
     const cellStart = new Date(day);
     cellStart.setHours(hour, 0, 0, 0);
     const cellEnd = new Date(day);
     cellEnd.setHours(hour + 1, 0, 0, 0);
 
-    const result: { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null }[] = [];
+    const result: { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null; isPending: boolean }[] = [];
     const seen = new Set<string>();
 
     for (const p of providers) {
@@ -298,12 +349,17 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
         if (a.kind === "available" && aStart < cellEnd && aEnd > cellStart) {
           if (!seen.has(p.providerId)) {
             seen.add(p.providerId);
+            // Pending si un interval pending chevauche exactement la cellule cliquée
+            const isPending = p.pendingIntervals.some(
+              (pi) => new Date(pi.startAt) < cellEnd && new Date(pi.endAt) > cellStart
+            );
             result.push({
               providerId: p.providerId,
               providerNom: p.providerNom,
               metierNom: p.metierNom,
               color: metierColor(p.metierNom, allMetiers),
-              ville: null,
+              ville: p.ville ?? null,
+              isPending,
             });
           }
           break;
@@ -578,9 +634,16 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                             top, height,
                             left: `calc(${leftPct}% + 1px)`,
                             width: `calc(${widthPct}% - 2px)`,
-                            backgroundColor: b.color + "22",
-                            borderLeft: `3px solid ${b.color}`,
-                            color: b.color,
+                            backgroundColor: b.isPending
+                              ? "transparent"
+                              : b.color + "22",
+                            borderLeft: `3px solid ${b.isPending ? "#94a3b8" : b.color}`,
+                            color: b.isPending ? "#94a3b8" : b.color,
+                            // Hachurage CSS natif pour les créneaux réservés
+                            backgroundImage: b.isPending
+                              ? "repeating-linear-gradient(45deg, #94a3b822 0px, #94a3b822 4px, transparent 4px, transparent 10px)"
+                              : undefined,
+                            opacity: b.isPending ? 0.7 : 1,
                           }}
                           onMouseEnter={() => setHoveredSlot(b)}
                           onMouseLeave={() => setHoveredSlot(null)}
@@ -588,6 +651,12 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                         >
                           <span className="font-medium truncate block">{b.providerNom}</span>
                           {height > 28 && <span className="opacity-70">{fmtTime(b.startAt)}–{fmtTime(b.endAt)}</span>}
+                          {b.ville && height > 36 && !b.isPending && (
+                            <span className="opacity-60 truncate block">{b.ville}</span>
+                          )}
+                          {b.isPending && height > 20 && (
+                            <span className="text-[9px] opacity-80">Réservé</span>
+                          )}
                         </div>
                       );
                     })}
@@ -865,8 +934,13 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{p.providerNom}</p>
+                            {p.ville && <p className="text-[10px] text-muted-foreground truncate">📍 {p.ville}</p>}
                           </div>
-                          {slotExists ? (
+                          {p.isPending ? (
+                            <span className="text-[10px] px-2 py-1 rounded border border-slate-300 text-slate-500 bg-slate-50 shrink-0 cursor-not-allowed">
+                              Réservé
+                            </span>
+                          ) : slotExists ? (
                             <button
                               type="button"
                               onClick={() => addToCart(p, popup.day, popup.hour)}
@@ -907,10 +981,16 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
             <p className="font-semibold">{hoveredSlot.providerNom}</p>
           </div>
           <p className="text-muted-foreground text-xs">{hoveredSlot.metierNom}</p>
+          {hoveredSlot.ville && (
+            <p className="text-muted-foreground text-xs">📍 {hoveredSlot.ville}</p>
+          )}
           <p className="text-xs capitalize">
             {hoveredSlot.startAt.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}
           </p>
           <p className="font-medium text-xs">{fmtTime(hoveredSlot.startAt)} – {fmtTime(hoveredSlot.endAt)}</p>
+          {hoveredSlot.isPending && (
+            <p className="text-[10px] text-slate-500 border-t pt-1">Créneau réservé (±30 min trajet)</p>
+          )}
         </div>
       )}
     </div>

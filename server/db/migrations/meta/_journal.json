@@ -134,6 +134,13 @@
       "when": 1749470000004,
       "tag": "0019_drop_role_slot_couleur",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1749470000005,
+      "tag": "0020_session_group_numbers",
+      "breakpoints": true
     }
   ]
 }
