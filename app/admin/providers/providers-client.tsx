@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -82,6 +83,9 @@ export function ProvidersClient({ providers, metiers }: ProvidersClientProps) {
     <div className="px-4 md:px-8 py-6 md:py-8 max-w-[1100px] mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Prestataires</h1>
+        <Button asChild>
+          <Link href="/admin/users">Inviter un prestataire</Link>
+        </Button>
       </div>
 
       <div className="border rounded-lg">
@@ -99,8 +103,15 @@ export function ProvidersClient({ providers, metiers }: ProvidersClientProps) {
           <TableBody>
             {providers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  Aucun prestataire trouvé
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                  <p>Aucun prestataire trouvé</p>
+                  <p className="text-sm mt-1">
+                    Créez d&apos;abord un utilisateur avec le rôle &quot;Prestataire&quot; depuis la page{" "}
+                    <Link href="/admin/users" className="underline underline-offset-2">
+                      Utilisateurs
+                    </Link>
+                    .
+                  </p>
                 </TableCell>
               </TableRow>
             ) : (
