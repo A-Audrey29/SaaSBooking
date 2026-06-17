@@ -31,6 +31,12 @@ coverage
 .claude/worktrees/
 .claude/settings.local.json
 
+# Scripts one-off (vérification, migration ponctuelle, debug — jamais réexécutés)
+scripts/check-*.ts
+scripts/apply-*.ts
+scripts/fix-*.ts
+scripts/test-*.ts
+
 # Graphify (generated artifacts)
 graphify-out/
 

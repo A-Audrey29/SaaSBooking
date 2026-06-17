@@ -35,11 +35,6 @@ export const UpdateRoleGroupSchema = z.object({
 export const CreateRoleSlotSchema = z.object({
   workshopRoleGroupId: z.string().uuid(),
   metierId: z.string().uuid(),
-  couleur: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .optional()
-    .nullable(),
   isOptional: z.boolean().default(false),
   ordre: z.number().int().default(0),
 });
@@ -47,11 +42,6 @@ export const CreateRoleSlotSchema = z.object({
 export const UpdateRoleSlotSchema = z.object({
   id: z.string().uuid(),
   metierId: z.string().uuid(),
-  couleur: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .optional()
-    .nullable(),
   isOptional: z.boolean().default(false),
   ordre: z.number().int().default(0),
 });

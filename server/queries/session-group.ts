@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq, isNull, and, count, min, sql } from "drizzle-orm";
+import { eq, isNull, and, or, count, min, sql } from "drizzle-orm";
 import { db, schema } from "@/server/db/client";
 
 export async function listWorkshopsForCentre(centreId: string) {
@@ -14,18 +14,11 @@ export async function listWorkshopsForCentre(centreId: string) {
       typeNom: schema.workshopType.nom,
     })
     .from(schema.workshop)
-    .innerJoin(
-      schema.project,
-      and(
-        eq(schema.workshop.projectId, schema.project.id),
-        isNull(schema.project.deletedAt)
-      )
-    )
     .leftJoin(schema.workshopType, eq(schema.workshop.typeId, schema.workshopType.id))
     .where(
       and(
-        eq(schema.project.centreId, centreId),
-        isNull(schema.workshop.deletedAt)
+        isNull(schema.workshop.deletedAt),
+        or(isNull(schema.workshop.centreId), eq(schema.workshop.centreId, centreId))
       )
     )
     .orderBy(schema.workshop.nom);
@@ -34,7 +27,7 @@ export async function listWorkshopsForCentre(centreId: string) {
   // pour les afficher dans les cards sans interaction
   const typeIds = [...new Set(workshops.map((w) => w.typeId).filter(Boolean))] as string[];
 
-  const rolesByType = new Map<string, { nom: string; isOptional: boolean; couleur: string | null }[]>();
+  const rolesByType = new Map<string, { nom: string; isOptional: boolean; color: string | null }[]>();
 
   if (typeIds.length > 0) {
     for (const typeId of typeIds) {
@@ -47,7 +40,7 @@ export async function listWorkshopsForCentre(centreId: string) {
           workshopRoleSlots: {
             where: (wrs, { isNull }) => isNull(wrs.deletedAt),
             orderBy: (wrs, { asc }) => [asc(wrs.ordre)],
-            with: { metier: { columns: { nom: true } } },
+            with: { metier: { columns: { nom: true, color: true } } },
           },
         },
       });
@@ -56,7 +49,7 @@ export async function listWorkshopsForCentre(centreId: string) {
         rolesByType.set(typeId, groups[0].workshopRoleSlots.map((s) => ({
           nom: s.metier.nom,
           isOptional: s.isOptional,
-          couleur: s.couleur,
+          color: s.metier.color ?? null,
         })));
       }
     }
@@ -81,7 +74,7 @@ export async function getRoleGroupsForWorkshopType(workshopTypeId: string) {
         orderBy: (wrs, { asc }) => [asc(wrs.ordre)],
         with: {
           metier: {
-            columns: { id: true, nom: true },
+            columns: { id: true, nom: true, color: true },
           },
         },
       },
@@ -301,10 +294,9 @@ export async function getWorkshopWithType(workshopId: string) {
       durationMin: schema.workshop.durationMin,
       typeId: schema.workshop.typeId,
       typeNom: schema.workshopType.nom,
-      projectCentreId: schema.project.centreId,
+      centreId: schema.workshop.centreId,
     })
     .from(schema.workshop)
-    .innerJoin(schema.project, eq(schema.workshop.projectId, schema.project.id))
     .leftJoin(schema.workshopType, eq(schema.workshop.typeId, schema.workshopType.id))
     .where(eq(schema.workshop.id, workshopId));
 

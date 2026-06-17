@@ -6,6 +6,7 @@ export async function listAllMetiers() {
     .select({
       id: schema.metier.id,
       nom: schema.metier.nom,
+      color: schema.metier.color,
       createdAt: schema.metier.createdAt,
     })
     .from(schema.metier)

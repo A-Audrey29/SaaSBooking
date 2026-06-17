@@ -32,6 +32,7 @@ import { softDeleteMetier } from "./metiers.actions";
 interface Metier {
   id: string;
   nom: string;
+  color: string | null;
   createdAt: Date;
 }
 
@@ -55,6 +56,7 @@ export function MetiersClient({ metiers }: MetiersClientProps) {
     setSelectedMetier(m);
     setSheetOpen(true);
   };
+
 
   const handleSheetClose = () => {
     setSheetOpen(false);
@@ -99,7 +101,20 @@ export function MetiersClient({ metiers }: MetiersClientProps) {
             ) : (
               metiers.map((m) => (
                 <TableRow key={m.id}>
-                  <TableCell className="font-medium">{m.nom}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {m.color ? (
+                        <span
+                          className="inline-block h-4 w-4 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: m.color }}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <span className="inline-block h-4 w-4 rounded-full flex-shrink-0 border border-dashed border-muted-foreground/40" aria-hidden="true" />
+                      )}
+                      {m.nom}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button variant="outline" size="sm" onClick={() => handleEdit(m)}>
                       Renommer
