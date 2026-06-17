@@ -74,9 +74,15 @@ function metierColor(metierNom: string, allMetiers: string[]): string {
 
 // ── Constantes grille ─────────────────────────────────────────────────────────
 
-const HOURS = Array.from({ length: 13 }, (_, i) => 7 + i); // 7h → 19h
-const SLOT_H = 48;
+const SLOTS = Array.from({ length: 25 }, (_, i) => 7 + i * 0.5); // 7h → 19h par 30min
+const SLOT_H = 24; // hauteur px d'un slot demi-heure (48/2)
 const DOW = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
+
+/** Formate un slot décimal en "Xh00" ou "Xh30". */
+function fmtSlot(slot: number): string {
+  const h = Math.floor(slot);
+  return `${h}h${slot % 1 === 0.5 ? "30" : "00"}`;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -145,7 +151,7 @@ interface CartItem {
 
 interface CellPopup {
   day: Date;
-  hour: number; // entier ex: 9 → 9h–10h
+  slot: number; // décimal ex: 9 → 9h00, 9.5 → 9h30
   x: number;
   y: number;
 }
@@ -327,15 +333,16 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
     return ids.size;
   }, [providers, filterMetiers]);
 
-  const gridTop = HOURS[0];
+  const gridTop = SLOTS[0];
 
   // ── Popup : prestataires dispo sur la cellule cliquée ──────────────────────
 
-  function getProvidersForCell(day: Date, hour: number): { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null; isPending: boolean }[] {
+  function getProvidersForCell(day: Date, slot: number): { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null; isPending: boolean }[] {
+    const h = Math.floor(slot);
+    const m = slot % 1 === 0.5 ? 30 : 0;
     const cellStart = new Date(day);
-    cellStart.setHours(hour, 0, 0, 0);
-    const cellEnd = new Date(day);
-    cellEnd.setHours(hour + 1, 0, 0, 0);
+    cellStart.setHours(h, m, 0, 0);
+    const cellEnd = new Date(cellStart.getTime() + 30 * 60 * 1000); // +30min
 
     const result: { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null; isPending: boolean }[] = [];
     const seen = new Set<string>();
@@ -371,9 +378,9 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
     return result.sort((a, b) => a.metierNom.localeCompare(b.metierNom) || a.providerNom.localeCompare(b.providerNom));
   }
 
-  function handleCellClick(day: Date, hour: number, e: React.MouseEvent) {
+  function handleCellClick(day: Date, slot: number, e: React.MouseEvent) {
     e.stopPropagation();
-    setPopup({ day, hour, x: e.clientX, y: e.clientY });
+    setPopup({ day, slot, x: e.clientX, y: e.clientY });
     setHoveredSlot(null);
   }
 
@@ -392,14 +399,16 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
     return null;
   }
 
-  function addToCart(provider: { providerId: string; providerNom: string; metierNom: string; color: string }, day: Date, hour: number) {
+  function addToCart(provider: { providerId: string; providerNom: string; metierNom: string; color: string }, day: Date, slot: number) {
     if (!sessionGroup) return;
 
     const ticketSlotId = resolveTicketSlotId(provider.metierNom);
     if (!ticketSlotId) return;
 
+    const h = Math.floor(slot);
+    const m = slot % 1 === 0.5 ? 30 : 0;
     const startAt = new Date(day);
-    startAt.setHours(hour, 0, 0, 0);
+    startAt.setHours(h, m, 0, 0);
     const endAt = new Date(startAt);
     endAt.setMinutes(endAt.getMinutes() + sessionGroup.durationMin);
 
@@ -590,11 +599,13 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
           </div>
 
           {/* Corps grille */}
-          <div className="relative" style={{ height: HOURS.length * SLOT_H }}>
-            {/* Lignes heures */}
-            {HOURS.map((h) => (
-              <div key={h} className="absolute w-full border-t border-border/50 flex" style={{ top: (h - gridTop) * SLOT_H }}>
-                <div className="w-12 shrink-0 pr-2 text-right text-[10px] text-muted-foreground -translate-y-2.5">{h}h</div>
+          <div className="relative" style={{ height: SLOTS.length * SLOT_H }}>
+            {/* Lignes demi-heures — label uniquement sur heures rondes */}
+            {SLOTS.map((s) => (
+              <div key={s} className={`absolute w-full flex ${s % 1 === 0 ? "border-t border-border/50" : "border-t border-border/20"}`} style={{ top: (s - gridTop) * SLOT_H }}>
+                <div className="w-12 shrink-0 pr-2 text-right text-[10px] text-muted-foreground -translate-y-2.5">
+                  {s % 1 === 0 ? `${s}h` : null}
+                </div>
               </div>
             ))}
 
@@ -610,13 +621,13 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
                 return (
                   <div key={dayIdx} className="relative border-r last:border-r-0">
-                    {/* Cellules cliquables par heure */}
-                    {hasCart && HOURS.map((h) => (
+                    {/* Cellules cliquables par demi-heure */}
+                    {hasCart && SLOTS.map((s) => (
                       <div
-                        key={h}
+                        key={s}
                         className="absolute left-0 right-0 hover:bg-primary/5 cursor-pointer transition-colors"
-                        style={{ top: (h - gridTop) * SLOT_H, height: SLOT_H }}
-                        onClick={(e) => handleCellClick(day, h, e)}
+                        style={{ top: (s - gridTop) * SLOT_H, height: SLOT_H }}
+                        onClick={(e) => handleCellClick(day, s, e)}
                       />
                     ))}
 
@@ -668,7 +679,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                         style={{
                           left: `calc(${((MAX_COLS - 1) / MAX_COLS) * 100}% + 1px)`,
                           width: `calc(${(1 / MAX_COLS) * 100}% - 2px)`,
-                          height: HOURS.length * SLOT_H - 4,
+                          height: SLOTS.length * SLOT_H - 4,
                         }}
                         title={`+${overflowCount} prestataire${overflowCount > 1 ? "s" : ""} — filtrez par métier pour voir`}
                         onClick={(e) => {
@@ -886,11 +897,12 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
       {/* ── Popup cellule ── */}
       {popup && hasCart && (() => {
+        const ph = Math.floor(popup.slot);
+        const pm = popup.slot % 1 === 0.5 ? 30 : 0;
         const cellStart = new Date(popup.day);
-        cellStart.setHours(popup.hour, 0, 0, 0);
-        const cellEnd = new Date(popup.day);
-        cellEnd.setHours(popup.hour + 1, 0, 0, 0);
-        const available = getProvidersForCell(popup.day, popup.hour);
+        cellStart.setHours(ph, pm, 0, 0);
+        const cellEnd = new Date(cellStart.getTime() + 30 * 60 * 1000);
+        const available = getProvidersForCell(popup.day, popup.slot);
         const isRight = popup.x > (typeof window !== "undefined" ? window.innerWidth / 2 : 700);
 
         return (
@@ -907,7 +919,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                 <p className="font-semibold text-sm">
                   {popup.day.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                 </p>
-                <p className="text-xs text-muted-foreground">{popup.hour}h00 – {popup.hour + 1}h00</p>
+                <p className="text-xs text-muted-foreground">{fmtSlot(popup.slot)} – {fmtSlot(popup.slot + 0.5)}</p>
               </div>
               <button type="button" onClick={() => setPopup(null)} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
             </div>
@@ -943,7 +955,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                           ) : slotExists ? (
                             <button
                               type="button"
-                              onClick={() => addToCart(p, popup.day, popup.hour)}
+                              onClick={() => addToCart(p, popup.day, popup.slot)}
                               className={`text-xs px-2 py-1 rounded border transition-colors shrink-0 ${
                                 alreadyInCart
                                   ? "border-green-400 text-green-700 bg-green-50"

@@ -58,8 +58,17 @@ export async function createDateException(
   const prov = await resolveProviderFromUser(ctx.userId);
   if (!prov) throw new Error("Aucun prestataire associé à ce compte");
 
-  const dayStartUtc = gpDateTimeToUtc(input.date, 0, 0);
-  const dayEndUtc = gpDateTimeToUtc(addDaysISO(input.date, 1), 0, 0);
+  // Plage horaire : utilise startTime/endTime si fournis, sinon journée entière (00:00–24:00 GP).
+  const [startH, startM] = input.startTime
+    ? input.startTime.split(":").map(Number)
+    : [0, 0];
+  const [endH, endM] = input.endTime
+    ? input.endTime.split(":").map(Number)
+    : [0, 0];
+  const dayStartUtc = gpDateTimeToUtc(input.date, startH, startM);
+  const dayEndUtc = input.endTime
+    ? gpDateTimeToUtc(input.date, endH, endM)
+    : gpDateTimeToUtc(addDaysISO(input.date, 1), 0, 0);
 
   let deleted = 0;
 
