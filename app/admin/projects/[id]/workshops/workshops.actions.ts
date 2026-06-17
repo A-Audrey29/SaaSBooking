@@ -22,6 +22,7 @@ export async function createWorkshop(
     const ctx = await requireRole("super_admin");
     const validated = CreateWorkshopSchema.parse(input);
 
+    // TODO(multi-centre): passer centreId depuis le projet parent quand les ateliers privés seront supportés (BDR-022)
     const [created] = await db
       .insert(schema.workshop)
       .values({
@@ -53,6 +54,8 @@ export async function updateWorkshop(
     const ctx = await requireRole("super_admin");
     const validated = UpdateWorkshopSchema.parse(input);
 
+    let projectId: string | null = null;
+
     await db.transaction(async (tx) => {
       const [before] = await tx
         .select()
@@ -60,6 +63,7 @@ export async function updateWorkshop(
         .where(and(eq(schema.workshop.id, validated.id), isNull(schema.workshop.deletedAt)));
 
       if (!before) throw new Error("Atelier introuvable ou supprimé");
+      projectId = before.projectId ?? null;
 
       const [after] = await tx
         .update(schema.workshop)
@@ -85,6 +89,7 @@ export async function updateWorkshop(
     });
 
     revalidatePath(`/admin/projects`);
+    if (projectId) revalidatePath(`/admin/projects/${projectId}/workshops`);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
@@ -106,6 +111,8 @@ export async function softDeleteWorkshop(
       };
     }
 
+    let projectId: string | null = null;
+
     await db.transaction(async (tx) => {
       const [before] = await tx
         .select()
@@ -113,6 +120,7 @@ export async function softDeleteWorkshop(
         .where(and(eq(schema.workshop.id, validated.id), isNull(schema.workshop.deletedAt)));
 
       if (!before) throw new Error("Atelier introuvable ou déjà supprimé");
+      projectId = before.projectId ?? null;
 
       const now = new Date();
       await tx
@@ -124,6 +132,7 @@ export async function softDeleteWorkshop(
     });
 
     revalidatePath(`/admin/projects`);
+    if (projectId) revalidatePath(`/admin/projects/${projectId}/workshops`);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };

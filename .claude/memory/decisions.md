@@ -19,6 +19,7 @@ Schema:
 | BDR-020 | 2026-06-10 | Sécurité/Git | environment.md : placeholders génériques, jamais hostname réel |
 | BDR-021 | 2026-06-15 | Project/Centre | project_centre N-N — ANNULÉE, remplacée par BDR-022 |
 | BDR-022 | 2026-06-15 | Workshop/Centre | workshop.centreId nullable = catalogue partagé admin |
+| BDR-023 | 2026-06-17 | Workshop/Centre | createWorkshop insère centreId=NULL (global) intentionnellement en V1 — à passer depuis le projet parent quand ateliers privés seront supportés |
 | BDR-017 | 2026-06-09 | Référent/Dispo | Prestataires non contraints par centre en V1 |
 | BDR-018 | 2026-06-09 | Référent/UX | Redirect post-création séance → calendrier dispos filtré |
 | BDR-001 | 2026-05-11 | Auth | Better Auth (magic link V1) |
