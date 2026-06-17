@@ -18,12 +18,12 @@ export default async function ReferentHomePage() {
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 max-w-[1100px] mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Mes sessions</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Mes séances</h1>
         <a
           href="/app/sessions/new"
           className="text-sm font-medium text-primary hover:underline"
         >
-          + Nouvelle session
+          + Nouvelle séance
         </a>
       </div>
       <SessionsListClient sessions={sessions} />

@@ -47,7 +47,7 @@ export function SessionsListClient({ sessions }: Props) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
         <p className="text-muted-foreground text-sm">
-          Aucune session créée — commencez par créer une nouvelle séance.
+          Aucune séance créée — commencez par créer une nouvelle séance.
         </p>
       </div>
     );
@@ -69,6 +69,10 @@ export function SessionsListClient({ sessions }: Props) {
                 {s.typeNom && <span> · {s.typeNom}</span>}
               </div>
               <div className="text-xs text-muted-foreground">
+                {s.sessionNumber != null && `Session #${s.sessionNumber}`}
+                {s.sessionNumber != null && s.seanceNumber != null && " · "}
+                {s.seanceNumber != null && `Séance ${s.seanceNumber}`}
+                {(s.sessionNumber != null || s.seanceNumber != null) && " · "}
                 {s.occurrencesCount} séance{s.occurrencesCount !== 1 ? "s" : ""} · Prochaine :{" "}
                 {formatDate(s.prochaineDateAt as Date | null)}
               </div>

@@ -364,7 +364,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setStep(2)}>Retour</Button>
             <Button onClick={handleSubmit} disabled={isPending}>
-              {isPending ? "Création…" : "Créer la session"}
+              {isPending ? "Création…" : "Créer la séance"}
             </Button>
           </div>
         </div>

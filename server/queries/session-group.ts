@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq, isNull, and, or, count, min, sql } from "drizzle-orm";
+import { eq, isNull, and, or, count, min, sql, not } from "drizzle-orm";
 import { db, schema } from "@/server/db/client";
 
 export async function listWorkshopsForCentre(centreId: string) {
@@ -15,10 +15,13 @@ export async function listWorkshopsForCentre(centreId: string) {
     })
     .from(schema.workshop)
     .leftJoin(schema.workshopType, eq(schema.workshop.typeId, schema.workshopType.id))
+    .leftJoin(schema.project, eq(schema.workshop.projectId, schema.project.id))
     .where(
       and(
         isNull(schema.workshop.deletedAt),
-        or(isNull(schema.workshop.centreId), eq(schema.workshop.centreId, centreId))
+        or(isNull(schema.workshop.centreId), eq(schema.workshop.centreId, centreId)),
+        // Exclure les workshops dont le projet parent est soft-deleté
+        or(isNull(schema.workshop.projectId), isNull(schema.project.deletedAt))
       )
     )
     .orderBy(schema.workshop.nom);
@@ -90,6 +93,8 @@ export async function listSessionGroupsForCentre(centreId: string) {
       id: schema.sessionGroup.id,
       nom: schema.sessionGroup.nom,
       centreId: schema.sessionGroup.centreId,
+      sessionNumber: schema.sessionGroup.sessionNumber,
+      seanceNumber: schema.sessionGroup.seanceNumber,
       workshopNom: schema.workshop.nom,
       typeNom: schema.workshopType.nom,
       occurrencesCount: count(schema.occurrence.id),
@@ -115,6 +120,8 @@ export async function listSessionGroupsForCentre(centreId: string) {
       schema.sessionGroup.id,
       schema.sessionGroup.nom,
       schema.sessionGroup.centreId,
+      schema.sessionGroup.sessionNumber,
+      schema.sessionGroup.seanceNumber,
       schema.workshop.nom,
       schema.workshopType.nom
     )

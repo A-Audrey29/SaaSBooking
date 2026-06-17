@@ -26,6 +26,8 @@ export async function createSessionGroup(
     const ctx = await requireRole("referent");
     const validated = CreateSessionGroupSchema.parse(input);
 
+    if (!ctx.centreId) throw new Error("Compte sans centre associé");
+
     const workshop = await getWorkshopWithType(validated.workshopId);
     if (!workshop) throw new Error("Atelier introuvable");
     if (workshop.centreId !== null && workshop.centreId !== ctx.centreId) {
@@ -55,6 +57,8 @@ export async function createSessionGroup(
           workshopId: validated.workshopId,
           centreId: ctx.centreId!,
           nom: validated.nom,
+          sessionNumber: validated.sessionNumber,
+          seanceNumber: validated.seanceCount,
           notes: validated.notes ?? null,
           createdBy: ctx.userId,
         })

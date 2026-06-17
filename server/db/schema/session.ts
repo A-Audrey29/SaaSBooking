@@ -2,7 +2,7 @@
  * Session schema - session groups (workshop instances).
  */
 
-import { pgTable, uuid, timestamp, text, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, timestamp, text, index, integer } from "drizzle-orm/pg-core";
 import { workshop } from "./workshop";
 import { centre } from "./centre";
 import { user } from "./auth";
@@ -23,6 +23,8 @@ export const sessionGroup = pgTable(
     nom: text("nom").notNull(), // e.g. "Groupe 1", "Groupe adolescents"
     audience: text("audience"), // e.g. "8 ados 13-16 ans"
     notes: text("notes"),
+    sessionNumber: integer("session_number"),
+    seanceNumber: integer("seance_number"),
     createdBy: uuid("created_by")
       .references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
