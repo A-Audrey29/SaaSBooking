@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,73 +27,71 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ProjectForm } from "./project-form";
-import { softDeleteProject } from "./projects.actions";
+import { WorkshopForm } from "./workshop-form";
+import { softDeleteWorkshop } from "./workshops.actions";
 
-interface Project {
+interface WorkshopRow {
   id: string;
-  centreId: string;
-  centreNom: string;
   nom: string;
   description: string | null;
-  financeur: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  createdAt: Date;
+  typeId: string | null;
+  typeNom: string | null;
+  seancesCount: number;
+  durationMin: number;
+  centreId: string | null;
 }
 
-interface Centre {
+interface WorkshopType {
   id: string;
   nom: string;
+  code: string;
 }
 
-interface ProjectsClientProps {
-  projects: Project[];
-  centres: Centre[];
+interface WorkshopsClientProps {
+  projectId: string;
+  workshops: WorkshopRow[];
+  workshopTypes: WorkshopType[];
 }
 
-function formatDate(d: string | null): string {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("fr-FR");
-}
-
-export function ProjectsClient({ projects, centres }: ProjectsClientProps) {
+export function WorkshopsClient({ projectId, workshops, workshopTypes }: WorkshopsClientProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selected, setSelected] = useState<WorkshopRow | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleCreate = () => {
-    setSelectedProject(null);
+    setSelected(null);
     setSheetOpen(true);
   };
 
-  const handleEdit = (project: Project) => {
-    setSelectedProject(project);
+  const handleEdit = (w: WorkshopRow) => {
+    setSelected(w);
     setSheetOpen(true);
   };
 
   const handleSheetClose = () => {
     setSheetOpen(false);
-    setSelectedProject(null);
+    setSelected(null);
   };
 
   const handleDeleteConfirm = () => {
     if (!deleteTargetId) return;
+    setDeleteError(null);
     startTransition(async () => {
-      const result = await softDeleteProject({ id: deleteTargetId });
-      if (!result.ok) {
-        console.error("Erreur suppression:", result.error);
+      const result = await softDeleteWorkshop({ id: deleteTargetId });
+      if (result.ok) {
+        setDeleteTargetId(null);
+      } else {
+        setDeleteError(result.error);
       }
-      setDeleteTargetId(null);
     });
   };
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 max-w-[1100px] mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-h-2xl font-semibold tracking-tight">Projets</h1>
-        <Button onClick={handleCreate}>+ Nouveau projet</Button>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={handleCreate}>+ Ajouter un atelier</Button>
       </div>
 
       <div className="border rounded-lg">
@@ -102,51 +99,42 @@ export function ProjectsClient({ projects, centres }: ProjectsClientProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nom</TableHead>
-              <TableHead>Centre</TableHead>
-              <TableHead>Financeur</TableHead>
-              <TableHead>Période</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Séances</TableHead>
+              <TableHead>Durée</TableHead>
+              <TableHead>Visibilité</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {projects.length === 0 ? (
+            {workshops.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  Aucun projet trouvé
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  Aucun atelier dans ce projet
                 </TableCell>
               </TableRow>
             ) : (
-              projects.map((project) => (
-                <TableRow key={project.id}>
-                  <TableCell className="font-medium">
-                    <Link
-                      href={`/admin/projects/${project.id}`}
-                      className="hover:underline focus-visible:underline outline-none"
-                    >
-                      {project.nom}
-                    </Link>
-                  </TableCell>
+              workshops.map((w) => (
+                <TableRow key={w.id}>
+                  <TableCell className="font-medium">{w.nom}</TableCell>
+                  <TableCell>{w.typeNom ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell>{w.seancesCount}</TableCell>
+                  <TableCell>{w.durationMin} min</TableCell>
                   <TableCell>
-                    <Badge variant="outline">{project.centreNom}</Badge>
-                  </TableCell>
-                  <TableCell>{project.financeur ?? "—"}</TableCell>
-                  <TableCell>
-                    {project.startDate || project.endDate
-                      ? `${formatDate(project.startDate)} → ${formatDate(project.endDate)}`
-                      : "—"}
+                    {w.centreId ? (
+                      <Badge variant="outline">Privé</Badge>
+                    ) : (
+                      <Badge variant="secondary">Global</Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(project)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(w)}>
                       Modifier
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setDeleteTargetId(project.id)}
+                      onClick={() => { setDeleteError(null); setDeleteTargetId(w.id); }}
                       disabled={isPending}
                     >
                       Supprimer
@@ -163,22 +151,24 @@ export function ProjectsClient({ projects, centres }: ProjectsClientProps) {
         <SheetContent className="overflow-y-auto">
           <SheetHeader>
             <SheetTitle>
-              {selectedProject ? "Modifier le projet" : "Nouveau projet"}
+              {selected ? "Modifier l'atelier" : "Nouvel atelier"}
             </SheetTitle>
           </SheetHeader>
           <div className="mt-6">
-            {selectedProject ? (
-              <ProjectForm
+            {selected ? (
+              <WorkshopForm
                 mode="edit"
-                project={selectedProject}
-                centres={centres}
+                workshop={selected}
+                projectId={projectId}
+                workshopTypes={workshopTypes}
                 onSuccess={handleSheetClose}
                 onCancel={handleSheetClose}
               />
             ) : (
-              <ProjectForm
+              <WorkshopForm
                 mode="create"
-                centres={centres}
+                projectId={projectId}
+                workshopTypes={workshopTypes}
                 onSuccess={handleSheetClose}
                 onCancel={handleSheetClose}
               />
@@ -189,17 +179,18 @@ export function ProjectsClient({ projects, centres }: ProjectsClientProps) {
 
       <AlertDialog
         open={deleteTargetId !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTargetId(null);
-        }}
+        onOpenChange={(open) => { if (!open) { setDeleteTargetId(null); setDeleteError(null); } }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer cet atelier ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Le projet sera désactivé. Cette action est réversible par un administrateur.
+              L&apos;atelier sera désactivé. Cette action est réversible par un administrateur.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deleteError && (
+            <p className="text-sm text-destructive px-1">{deleteError}</p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Annuler</AlertDialogCancel>
             <AlertDialogAction

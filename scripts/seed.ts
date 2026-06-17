@@ -185,21 +185,18 @@ async function main() {
     {
       workshopRoleGroupId: group1.id,
       metierId: metierByNom["Psychologue"],
-      couleur: "#1f3a5f",
       isOptional: false,
       ordre: 0,
     },
     {
       workshopRoleGroupId: group1.id,
       metierId: metierByNom["Éducateur"],
-      couleur: "#2f5d3a",
       isOptional: false,
       ordre: 1,
     },
     {
       workshopRoleGroupId: group1.id,
       metierId: metierByNom["Animateur"],
-      couleur: "#b78a2a",
       isOptional: false,
       ordre: 2,
     },
@@ -218,14 +215,12 @@ async function main() {
     {
       workshopRoleGroupId: group2.id,
       metierId: metierByNom["Coach sportif"],
-      couleur: "#a64b1f",
       isOptional: false,
       ordre: 0,
     },
     {
       workshopRoleGroupId: group2.id,
       metierId: metierByNom["Éducateur sportif"],
-      couleur: "#7a1f3a",
       isOptional: false,
       ordre: 1,
     },
@@ -233,31 +228,7 @@ async function main() {
 
   console.log("  → Workshop role groups: 2 groups, 5 slots created (MEDIATION: 0 group, Option B)");
 
-  // Create workshops
-  const [workshop1] = await db
-    .insert(schema.workshop)
-    .values({
-      projectId: project.id,
-      typeId: type1.id,
-      nom: "Gestion des émotions",
-      description: "Atelier parentalité autour de la régulation émotionnelle.",
-      seancesCount: 4,
-      durationMin: 120,
-    })
-    .returning();
-
-  const [workshop2] = await db
-    .insert(schema.workshop)
-    .values({
-      projectId: project.id,
-      typeId: type2.id,
-      nom: "Pratique d'activité physique",
-      description: "Activité physique en plein air pour jeunes adolescents.",
-      seancesCount: 6,
-      durationMin: 90,
-    })
-    .returning();
-  console.log(`  → Workshops: ${workshop1.nom}, ${workshop2.nom}`);
+  console.log("  → Workshops: aucun (créés via UI admin)");
 
   // Create providers
   const [provider1] = await db
@@ -272,7 +243,7 @@ async function main() {
     })
     .returning();
 
-  // provider2 linked to providerUser (jean.dumont) via BDR-010
+  // provider2 linked to providerUser (jean.dumont) — métier corrigé : Éducateur (pas Éducateur sportif)
   const [provider2] = await db
     .insert(schema.provider)
     .values({
@@ -281,85 +252,79 @@ async function main() {
       email: "jean.dumont@provider.dev",
       telephone: "0690 22 33 44",
       ville: "Le Gosier",
-      metierId: metierByNom["Éducateur sportif"],
-      bio: "Coach sportif et éducateur sportif diplômé d'État.",
+      metierId: metierByNom["Éducateur"],
+      bio: "Éducateur spécialisé, intervenant en milieu familial.",
     })
     .returning();
-  console.log(`  → Providers: ${provider1.nom}, ${provider2.nom} (lié user: ${providerUser.email})`);
 
-  // Create session_group + occurrences with dates around today for calendar testing
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  function nextWeekday(base: Date, offsetDays: number, hour = 9): Date {
-    const d = new Date(base);
-    d.setDate(d.getDate() + offsetDays);
-    d.setHours(hour, 0, 0, 0);
-    return d;
-  }
-
-  const [sg1] = await db
-    .insert(schema.sessionGroup)
+  const [provider3] = await db
+    .insert(schema.provider)
     .values({
-      workshopId: workshop1.id,
-      centreId: centreData.id,
-      nom: "Groupe Parents — Émotions",
-      audience: "8 parents",
-      createdBy: referent1.id,
+      nom: "Sophie Céleste",
+      email: "s.celeste@example.gp",
+      telephone: "0690 55 66 77",
+      ville: "Baie-Mahault",
+      metierId: metierByNom["Animateur"],
+      bio: "Animatrice socioculturelle, spécialisée parentalité.",
     })
     .returning();
 
-  const occurrences1 = [
-    { index: 1, offsetDays: 1, duration: 120 },
-    { index: 2, offsetDays: 8, duration: 120 },
-    { index: 3, offsetDays: 15, duration: 120 },
-    { index: 4, offsetDays: 22, duration: 120 },
-  ];
+  console.log(`  → Providers: ${provider1.nom}, ${provider2.nom}, ${provider3.nom}`);
 
-  for (const occ of occurrences1) {
-    const startAt = nextWeekday(today, occ.offsetDays, 9);
-    const endAt = new Date(startAt.getTime() + occ.duration * 60_000);
-    await db.insert(schema.occurrence).values({
-      sessionGroupId: sg1.id,
-      index: occ.index,
-      startAt,
-      endAt,
-      statut: "planned",
-      workshopRoleGroupId: group1.id,
-    });
+  // ── Disponibilités — semaine courante + suivante ──────────────────────────
+  // Créneau conjoint garanti : Mercredi 14h–17h (les 3 disponibles)
+  //
+  // Marie-Laure (Psychologue) : Lun, Mer, Ven — 9h–12h + 14h–17h
+  // Jean Dumont  (Éducateur)  : Mar, Mer, Jeu — 10h–18h
+  // Sophie Céleste (Animateur): Lun, Mer, Sam — 14h–18h
+
+  function mondayOf(d: Date): Date {
+    const day = d.getDay(); // 0=dim
+    const diff = day === 0 ? -6 : 1 - day;
+    const m = new Date(d);
+    m.setDate(d.getDate() + diff);
+    m.setHours(0, 0, 0, 0);
+    return m;
   }
 
-  const [sg2] = await db
-    .insert(schema.sessionGroup)
-    .values({
-      workshopId: workshop2.id,
-      centreId: centreData.id,
-      nom: "Groupe Ados — Sport",
-      audience: "12 ados 14-16 ans",
-      createdBy: referent1.id,
-    })
-    .returning();
-
-  const occurrences2 = [
-    { index: 1, offsetDays: 2, duration: 90 },
-    { index: 2, offsetDays: 9, duration: 90 },
-    { index: 3, offsetDays: 16, duration: 90 },
-  ];
-
-  for (const occ of occurrences2) {
-    const startAt = nextWeekday(today, occ.offsetDays, 14);
-    const endAt = new Date(startAt.getTime() + occ.duration * 60_000);
-    await db.insert(schema.occurrence).values({
-      sessionGroupId: sg2.id,
-      index: occ.index,
-      startAt,
-      endAt,
-      statut: "planned",
-      workshopRoleGroupId: group2.id,
-    });
+  function slot(base: Date, dayOffset: number, startH: number, endH: number): { startAt: Date; endAt: Date } {
+    const startAt = new Date(base);
+    startAt.setDate(base.getDate() + dayOffset);
+    startAt.setHours(startH, 0, 0, 0);
+    const endAt = new Date(startAt);
+    endAt.setHours(endH, 0, 0, 0);
+    return { startAt, endAt };
   }
 
-  console.log(`  → Session groups: ${sg1.nom}, ${sg2.nom} (7 occurrences)`);
+  const dispos: { providerId: string; startAt: Date; endAt: Date; kind: string }[] = [];
+
+  for (let week = 0; week < 2; week++) {
+    const mon = mondayOf(new Date());
+    mon.setDate(mon.getDate() + week * 7);
+
+    // Marie-Laure : Lun(0), Mer(2), Ven(4) — 9h-12h + 14h-17h
+    for (const dayOff of [0, 2, 4]) {
+      dispos.push({ providerId: provider1.id, kind: "available", ...slot(mon, dayOff, 9, 12) });
+      dispos.push({ providerId: provider1.id, kind: "available", ...slot(mon, dayOff, 14, 17) });
+    }
+
+    // Jean Dumont : Mar(1), Mer(2), Jeu(3) — 10h-18h
+    for (const dayOff of [1, 2, 3]) {
+      dispos.push({ providerId: provider2.id, kind: "available", ...slot(mon, dayOff, 10, 18) });
+    }
+
+    // Sophie Céleste : Lun(0), Mer(2), Sam(5) — 14h-18h
+    for (const dayOff of [0, 2, 5]) {
+      dispos.push({ providerId: provider3.id, kind: "available", ...slot(mon, dayOff, 14, 18) });
+    }
+  }
+
+  await db.insert(schema.providerAvailability).values(
+    dispos.map((d) => ({ ...d, id: crypto.randomUUID() }))
+  );
+  console.log(`  → Disponibilités: ${dispos.length} créneaux insérés (créneau conjoint: Mercredi 14h–17h)`);
+
+  console.log("  → Session groups: aucun (créés via UI référent)");
 
   console.log("✓ Seed completed");
 }
