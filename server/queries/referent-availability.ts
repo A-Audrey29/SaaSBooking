@@ -7,12 +7,18 @@ export interface ProviderDispoRow {
   providerId: string;
   providerNom: string;
   metierNom: string;
+  ville: string | null;
   availabilities: {
     id: string;
     startAt: Date;
     endAt: Date;
     kind: string;
   }[];
+  /**
+   * Intervalles bloqués = occurrence pending ±30 min de buffer trajet.
+   * Utilisés côté UI pour le split visuel et le grisage. Non utilisés pour le blocage dur.
+   */
+  pendingIntervals: { startAt: Date; endAt: Date }[];
 }
 
 /**
@@ -38,6 +44,7 @@ export async function getProvidersDisposForCentre(
       providerId: schema.provider.id,
       providerNom: schema.provider.nom,
       metierNom: schema.metier.nom,
+      ville: schema.provider.ville,
     })
     .from(schema.provider)
     .innerJoin(schema.metier, eq(schema.provider.metierId, schema.metier.id))
@@ -68,11 +75,50 @@ export async function getProvidersDisposForCentre(
     )
     .orderBy(asc(schema.providerAvailability.startAt));
 
-  // 3. Assembler
-  const disposByProvider = new Map<string, typeof dispos>();
+  // 3. Créneaux déjà réservés (ticketSlot.statut = 'pending') pour ces prestataires dans la fenêtre
+  //    Chevauchement : slot.startAt < dispo.endAt AND slot.endAt > dispo.startAt
+  const pendingSlots = await db
+    .select({
+      providerId: schema.ticketSlot.providerId,
+      startAt: schema.occurrence.startAt,
+      endAt: schema.occurrence.endAt,
+    })
+    .from(schema.ticketSlot)
+    .innerJoin(schema.ticket, eq(schema.ticketSlot.ticketId, schema.ticket.id))
+    .innerJoin(schema.occurrence, eq(schema.ticket.occurrenceId, schema.occurrence.id))
+    .where(
+      and(
+        inArray(schema.ticketSlot.providerId, providerIds),
+        eq(schema.ticketSlot.statut, "pending"),
+        isNull(schema.ticketSlot.deletedAt),
+        isNull(schema.ticket.deletedAt),
+        isNull(schema.occurrence.deletedAt),
+        lte(schema.occurrence.startAt, to),
+        gte(schema.occurrence.endAt, from)
+      )
+    );
+
+  const BUFFER_MS = 30 * 60 * 1000; // 30 min buffer trajet
+
+  // Index : providerId → liste des intervalles pending ±30min buffer
+  const pendingByProvider = new Map<string, { startAt: Date; endAt: Date }[]>();
+  for (const s of pendingSlots) {
+    if (!s.providerId || !s.startAt || !s.endAt) continue;
+    const list = pendingByProvider.get(s.providerId) ?? [];
+    list.push({
+      startAt: new Date(s.startAt.getTime() - BUFFER_MS),
+      endAt: new Date(s.endAt.getTime() + BUFFER_MS),
+    });
+    pendingByProvider.set(s.providerId, list);
+  }
+
+  type DispoEntry = ProviderDispoRow["availabilities"][number];
+
+  // 4. Assembler dispos par prestataire
+  const disposByProvider = new Map<string, DispoEntry[]>();
   for (const d of dispos) {
     const list = disposByProvider.get(d.providerId) ?? [];
-    list.push(d);
+    list.push({ id: d.id, startAt: d.startAt, endAt: d.endAt, kind: d.kind });
     disposByProvider.set(d.providerId, list);
   }
 
@@ -80,7 +126,9 @@ export async function getProvidersDisposForCentre(
     providerId: p.providerId,
     providerNom: p.providerNom,
     metierNom: p.metierNom ?? "",
-    availabilities: disposByProvider.get(p.providerId) ?? [],
+    ville: p.ville ?? null,
+    availabilities: disposByProvider.get(p.providerId) ?? ([] as DispoEntry[]),
+    pendingIntervals: pendingByProvider.get(p.providerId) ?? [],
   }));
 }
 
@@ -105,6 +153,7 @@ export interface CartOccurrence {
 export interface SessionGroupCart {
   id: string;
   nom: string;
+  durationMin: number;
   occurrences: CartOccurrence[];
   /** Métiers distincts requis (providerRole non-skipped) */
   requiredRoles: string[];
@@ -113,14 +162,23 @@ export interface SessionGroupCart {
 /**
  * Charge le contexte d'une séance pour le panier du référent :
  * occurrences + ticket_slots actifs.
+ * Si occurrenceId est fourni, requiredRoles sont calculés depuis cette occurrence.
+ * Sinon, depuis la première occurrence sans date (comportement par défaut post-création).
  */
 export async function getSessionGroupForCart(
   sessionGroupId: string,
-  centreId: string
+  centreId: string,
+  occurrenceId?: string
 ): Promise<SessionGroupCart | null> {
   const [sg] = await db
-    .select({ id: schema.sessionGroup.id, nom: schema.sessionGroup.nom, centreId: schema.sessionGroup.centreId })
+    .select({
+      id: schema.sessionGroup.id,
+      nom: schema.sessionGroup.nom,
+      centreId: schema.sessionGroup.centreId,
+      durationMin: schema.workshop.durationMin,
+    })
     .from(schema.sessionGroup)
+    .innerJoin(schema.workshop, eq(schema.sessionGroup.workshopId, schema.workshop.id))
     .where(and(eq(schema.sessionGroup.id, sessionGroupId), isNull(schema.sessionGroup.deletedAt)));
 
   if (!sg || sg.centreId !== centreId) return null;
@@ -178,8 +236,12 @@ export async function getSessionGroupForCart(
 
   const occurrences = Array.from(occMap.values());
 
-  // Rôles requis = providerRoles distincts non-skipped sur la première occurrence sans date
-  const firstUnscheduled = occurrences.find((o) => !o.startAt) ?? occurrences[0];
+  // Rôles requis = providerRoles distincts non-skipped sur l'occurrence cible
+  // Si occurrenceId fourni → cibler cette occurrence, sinon première sans date
+  const targetOccurrence = occurrenceId
+    ? (occurrences.find((o) => o.occurrenceId === occurrenceId) ?? occurrences.find((o) => !o.startAt) ?? occurrences[0])
+    : (occurrences.find((o) => !o.startAt) ?? occurrences[0]);
+  const firstUnscheduled = targetOccurrence;
   const requiredRoles = firstUnscheduled
     ? [...new Set(
         firstUnscheduled.ticketSlots
@@ -188,12 +250,12 @@ export async function getSessionGroupForCart(
       )]
     : [];
 
-  return { id: sg.id, nom: sg.nom, occurrences, requiredRoles };
+  return { id: sg.id, nom: sg.nom, durationMin: sg.durationMin, occurrences, requiredRoles };
 }
 
 /**
  * Retourne les prestataires ayant une dispo `available` qui chevauche [startAt, endAt]
- * pour un métier donné.
+ * pour un métier donné, en excluant ceux qui ont déjà un ticketSlot pending sur ce créneau.
  * Chevauchement : dispo.startAt < endAt AND dispo.endAt > startAt
  */
 export async function getProvidersAvailableForSlot(
@@ -230,9 +292,33 @@ export async function getProvidersAvailableForSlot(
 
   // Dédoublonner (un prestataire peut avoir plusieurs dispos qui chevauchent)
   const seen = new Set<string>();
-  return rows.filter((r) => {
+  const candidates = rows.filter((r) => {
     if (seen.has(r.providerId)) return false;
     seen.add(r.providerId);
     return true;
   });
+
+  if (candidates.length === 0) return [];
+
+  // Exclure les prestataires avec un ticketSlot pending qui chevauche [startAt, endAt]
+  const candidateIds = candidates.map((c) => c.providerId);
+  const pendingRows = await db
+    .select({ providerId: schema.ticketSlot.providerId })
+    .from(schema.ticketSlot)
+    .innerJoin(schema.ticket, eq(schema.ticketSlot.ticketId, schema.ticket.id))
+    .innerJoin(schema.occurrence, eq(schema.ticket.occurrenceId, schema.occurrence.id))
+    .where(
+      and(
+        inArray(schema.ticketSlot.providerId, candidateIds),
+        eq(schema.ticketSlot.statut, "pending"),
+        isNull(schema.ticketSlot.deletedAt),
+        isNull(schema.ticket.deletedAt),
+        isNull(schema.occurrence.deletedAt),
+        lt(schema.occurrence.startAt, endAt),
+        gt(schema.occurrence.endAt, startAt)
+      )
+    );
+
+  const blockedIds = new Set(pendingRows.map((r) => r.providerId).filter(Boolean) as string[]);
+  return candidates.filter((c) => !blockedIds.has(c.providerId));
 }

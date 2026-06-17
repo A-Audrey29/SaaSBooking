@@ -3,6 +3,11 @@
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { sendCartRequests } from "./availability.actions";
 import type { ProviderDispoRow, SessionGroupCart } from "@/server/queries/referent-availability";
 
@@ -69,9 +74,15 @@ function metierColor(metierNom: string, allMetiers: string[]): string {
 
 // ── Constantes grille ─────────────────────────────────────────────────────────
 
-const HOURS = Array.from({ length: 13 }, (_, i) => 7 + i); // 7h → 19h
-const SLOT_H = 48;
+const SLOTS = Array.from({ length: 25 }, (_, i) => 7 + i * 0.5); // 7h → 19h par 30min
+const SLOT_H = 24; // hauteur px d'un slot demi-heure (48/2)
 const DOW = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
+
+/** Formate un slot décimal en "Xh00" ou "Xh30". */
+function fmtSlot(slot: number): string {
+  const h = Math.floor(slot);
+  return `${h}h${slot % 1 === 0.5 ? "30" : "00"}`;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -85,9 +96,46 @@ interface SlotBlock {
   providerNom: string;
   providerId: string;
   metierNom: string;
+  ville: string | null;
   color: string;
   columnIndex: number; // position dans la sous-colonne du jour
   columnCount: number; // nb total de colonnes affichées ce jour (≤ MAX_COLS - 1 si overflow)
+  isPending: boolean;  // segment hachuré (pending ±30min buffer)
+}
+
+/** Découpe une dispo [dispoStart, dispoEnd] en segments libres/pending autour des pendingIntervals. */
+function splitAvailability(
+  dispoStart: Date,
+  dispoEnd: Date,
+  pendingIntervals: { startAt: Date; endAt: Date }[]
+): { start: Date; end: Date; isPending: boolean }[] {
+  // Garder uniquement les intervals qui chevauchent la dispo, triés par startAt
+  const overlapping = pendingIntervals
+    .filter((pi) => pi.startAt < dispoEnd && pi.endAt > dispoStart)
+    .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+
+  if (overlapping.length === 0) {
+    return [{ start: dispoStart, end: dispoEnd, isPending: false }];
+  }
+
+  const segments: { start: Date; end: Date; isPending: boolean }[] = [];
+  let cursor = dispoStart;
+
+  for (const pi of overlapping) {
+    const pStart = pi.startAt < dispoStart ? dispoStart : pi.startAt;
+    const pEnd = pi.endAt > dispoEnd ? dispoEnd : pi.endAt;
+    if (cursor < pStart) {
+      segments.push({ start: cursor, end: pStart, isPending: false });
+    }
+    segments.push({ start: pStart, end: pEnd, isPending: true });
+    cursor = pEnd;
+  }
+
+  if (cursor < dispoEnd) {
+    segments.push({ start: cursor, end: dispoEnd, isPending: false });
+  }
+
+  return segments;
 }
 
 interface CartItem {
@@ -103,7 +151,7 @@ interface CartItem {
 
 interface CellPopup {
   day: Date;
-  hour: number; // entier ex: 9 → 9h–10h
+  slot: number; // décimal ex: 9 → 9h00, 9.5 → 9h30
   x: number;
   y: number;
 }
@@ -135,8 +183,42 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
   const [hoveredSlot, setHoveredSlot] = useState<SlotBlock | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [popup, setPopup] = useState<CellPopup | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (!sessionGroup) return [];
+    const targetOcc = sessionGroup.occurrences.find(
+      (o) => o.ticketSlots.some((s) => s.statut === "pending")
+    ) ?? sessionGroup.occurrences[0];
+    if (!targetOcc?.startAt || !targetOcc?.endAt) return [];
+
+    const metierList = [...new Set(providers.map((p) => p.metierNom))].sort();
+    return targetOcc.ticketSlots
+      .filter((s) => s.statut === "pending" && s.providerId)
+      .map((s) => {
+        const prov = providers.find((p) => p.providerId === s.providerId);
+        return {
+          ticketSlotId: s.ticketSlotId,
+          providerId: s.providerId!,
+          providerNom: prov?.providerNom ?? "",
+          metierNom: s.providerRole,
+          color: metierColor(s.providerRole, metierList),
+          startAt: new Date(targetOcc.startAt!),
+          endAt: new Date(targetOcc.endAt!),
+        };
+      });
+  });
   const [sendError, setSendError] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [dateConflictWarning, setDateConflictWarning] = useState<string | null>(null);
+
+  const slotsToSend = useMemo(() => {
+    if (!sessionGroup) return [];
+    return cart.filter((item) => {
+      const existingSlot = sessionGroup.occurrences
+        .flatMap((o) => o.ticketSlots)
+        .find((s) => s.ticketSlotId === item.ticketSlotId);
+      return !(existingSlot?.statut === "pending" && existingSlot?.providerId === item.providerId);
+    });
+  }, [cart, sessionGroup]);
 
   const allMetiers = useMemo(
     () => [...new Set(providers.map((p) => p.metierNom))].sort(),
@@ -215,14 +297,28 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
         const hasOverflow = cols.length > MAX_COLS;
         const visibleCols = hasOverflow ? MAX_COLS - 1 : cols.length;
         if (colIdx >= visibleCols) continue; // hors limite affichage
-        result.push({
-          id: a.id, startAt: start, endAt: end, kind: a.kind,
-          providerNom: p.providerNom, providerId: p.providerId,
-          metierNom: p.metierNom, color,
-          columnIndex: colIdx,
-          // si overflow, on réserve 1 colonne pour le badge → denominator = MAX_COLS
-          columnCount: hasOverflow ? MAX_COLS : visibleCols,
-        });
+        const columnCount = hasOverflow ? MAX_COLS : visibleCols;
+        const segments = splitAvailability(start, end, p.pendingIntervals.map((pi) => ({
+          startAt: new Date(pi.startAt),
+          endAt: new Date(pi.endAt),
+        })));
+        for (let si = 0; si < segments.length; si++) {
+          const seg = segments[si];
+          result.push({
+            id: `${a.id}:${seg.isPending ? "pending" : "free"}:${si}`,
+            startAt: seg.start,
+            endAt: seg.end,
+            kind: a.kind,
+            providerNom: p.providerNom,
+            providerId: p.providerId,
+            metierNom: p.metierNom,
+            ville: p.ville ?? null,
+            color,
+            columnIndex: colIdx,
+            columnCount,
+            isPending: seg.isPending,
+          });
+        }
       }
     }
     return result;
@@ -237,17 +333,18 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
     return ids.size;
   }, [providers, filterMetiers]);
 
-  const gridTop = HOURS[0];
+  const gridTop = SLOTS[0];
 
   // ── Popup : prestataires dispo sur la cellule cliquée ──────────────────────
 
-  function getProvidersForCell(day: Date, hour: number): { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null }[] {
+  function getProvidersForCell(day: Date, slot: number): { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null; isPending: boolean }[] {
+    const h = Math.floor(slot);
+    const m = slot % 1 === 0.5 ? 30 : 0;
     const cellStart = new Date(day);
-    cellStart.setHours(hour, 0, 0, 0);
-    const cellEnd = new Date(day);
-    cellEnd.setHours(hour + 1, 0, 0, 0);
+    cellStart.setHours(h, m, 0, 0);
+    const cellEnd = new Date(cellStart.getTime() + 30 * 60 * 1000); // +30min
 
-    const result: { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null }[] = [];
+    const result: { providerId: string; providerNom: string; metierNom: string; color: string; ville: string | null; isPending: boolean }[] = [];
     const seen = new Set<string>();
 
     for (const p of providers) {
@@ -259,12 +356,17 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
         if (a.kind === "available" && aStart < cellEnd && aEnd > cellStart) {
           if (!seen.has(p.providerId)) {
             seen.add(p.providerId);
+            // Pending si un interval pending chevauche exactement la cellule cliquée
+            const isPending = p.pendingIntervals.some(
+              (pi) => new Date(pi.startAt) < cellEnd && new Date(pi.endAt) > cellStart
+            );
             result.push({
               providerId: p.providerId,
               providerNom: p.providerNom,
               metierNom: p.metierNom,
               color: metierColor(p.metierNom, allMetiers),
-              ville: null,
+              ville: p.ville ?? null,
+              isPending,
             });
           }
           break;
@@ -276,9 +378,9 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
     return result.sort((a, b) => a.metierNom.localeCompare(b.metierNom) || a.providerNom.localeCompare(b.providerNom));
   }
 
-  function handleCellClick(day: Date, hour: number, e: React.MouseEvent) {
+  function handleCellClick(day: Date, slot: number, e: React.MouseEvent) {
     e.stopPropagation();
-    setPopup({ day, hour, x: e.clientX, y: e.clientY });
+    setPopup({ day, slot, x: e.clientX, y: e.clientY });
     setHoveredSlot(null);
   }
 
@@ -286,28 +388,40 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
   function resolveTicketSlotId(metierNom: string): string | null {
     if (!sessionGroup) return null;
-    // Première occurrence non encore planifiée (startAt null), slot non-skipped pour ce métier
     for (const occ of sessionGroup.occurrences) {
-      if (occ.startAt) continue; // déjà planifiée
       const slot = occ.ticketSlots.find(
-        (s) => s.providerRole === metierNom && (s.statut === "empty" || s.statut === "refused")
+        (s) =>
+          s.providerRole === metierNom &&
+          (s.statut === "empty" || s.statut === "refused" || s.statut === "pending")
       );
       if (slot) return slot.ticketSlotId;
     }
     return null;
   }
 
-  function addToCart(provider: { providerId: string; providerNom: string; metierNom: string; color: string }, day: Date, hour: number) {
+  function addToCart(provider: { providerId: string; providerNom: string; metierNom: string; color: string }, day: Date, slot: number) {
     if (!sessionGroup) return;
 
     const ticketSlotId = resolveTicketSlotId(provider.metierNom);
     if (!ticketSlotId) return;
 
+    const h = Math.floor(slot);
+    const m = slot % 1 === 0.5 ? 30 : 0;
     const startAt = new Date(day);
-    startAt.setHours(hour, 0, 0, 0);
-    const endAt = new Date(day);
-    endAt.setHours(hour + 1, 0, 0, 0);
+    startAt.setHours(h, m, 0, 0);
+    const endAt = new Date(startAt);
+    endAt.setMinutes(endAt.getMinutes() + sessionGroup.durationMin);
 
+    // Toutes les occurrences partagent le même créneau — bloquer si date différente
+    const existingItem = cart.find((i) => i.metierNom !== provider.metierNom);
+    if (existingItem && existingItem.startAt.getTime() !== startAt.getTime()) {
+      setDateConflictWarning(
+        `Créneau différent de ${fmtTime(existingItem.startAt)} (${existingItem.startAt.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}). Toutes les occurrences doivent être au même créneau.`
+      );
+      return;
+    }
+
+    setDateConflictWarning(null);
     setCart((prev) => {
       // Remplacer si même métier déjà dans le panier
       const filtered = prev.filter((item) => item.metierNom !== provider.metierNom);
@@ -324,15 +438,20 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
   }
 
   const requiredRoles = sessionGroup?.requiredRoles ?? [];
-  const cartComplete = requiredRoles.length > 0 && requiredRoles.every((r) => cart.some((i) => i.metierNom === r));
+  const cartReady = cart.length > 0;
 
   function handleSend() {
-    if (!sessionGroup || !cartComplete) return;
+    if (!sessionGroup || !cartReady) return;
     setSendError(null);
     startTransition(async () => {
+      if (slotsToSend.length === 0) {
+        router.push(`/app/sessions/${sessionGroup.id}`);
+        return;
+      }
+
       const result = await sendCartRequests({
         sessionGroupId: sessionGroup.id,
-        slots: cart.map((i) => ({
+        slots: slotsToSend.map((i) => ({
           ticketSlotId: i.ticketSlotId,
           providerId: i.providerId,
           startAt: i.startAt,
@@ -480,11 +599,13 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
           </div>
 
           {/* Corps grille */}
-          <div className="relative" style={{ height: HOURS.length * SLOT_H }}>
-            {/* Lignes heures */}
-            {HOURS.map((h) => (
-              <div key={h} className="absolute w-full border-t border-border/50 flex" style={{ top: (h - gridTop) * SLOT_H }}>
-                <div className="w-12 shrink-0 pr-2 text-right text-[10px] text-muted-foreground -translate-y-2.5">{h}h</div>
+          <div className="relative" style={{ height: SLOTS.length * SLOT_H }}>
+            {/* Lignes demi-heures — label uniquement sur heures rondes */}
+            {SLOTS.map((s) => (
+              <div key={s} className={`absolute w-full flex ${s % 1 === 0 ? "border-t border-border/50" : "border-t border-border/20"}`} style={{ top: (s - gridTop) * SLOT_H }}>
+                <div className="w-12 shrink-0 pr-2 text-right text-[10px] text-muted-foreground -translate-y-2.5">
+                  {s % 1 === 0 ? `${s}h` : null}
+                </div>
               </div>
             ))}
 
@@ -500,13 +621,13 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
                 return (
                   <div key={dayIdx} className="relative border-r last:border-r-0">
-                    {/* Cellules cliquables par heure */}
-                    {hasCart && HOURS.map((h) => (
+                    {/* Cellules cliquables par demi-heure */}
+                    {hasCart && SLOTS.map((s) => (
                       <div
-                        key={h}
+                        key={s}
                         className="absolute left-0 right-0 hover:bg-primary/5 cursor-pointer transition-colors"
-                        style={{ top: (h - gridTop) * SLOT_H, height: SLOT_H }}
-                        onClick={(e) => handleCellClick(day, h, e)}
+                        style={{ top: (s - gridTop) * SLOT_H, height: SLOT_H }}
+                        onClick={(e) => handleCellClick(day, s, e)}
                       />
                     ))}
 
@@ -524,9 +645,16 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                             top, height,
                             left: `calc(${leftPct}% + 1px)`,
                             width: `calc(${widthPct}% - 2px)`,
-                            backgroundColor: b.color + "22",
-                            borderLeft: `3px solid ${b.color}`,
-                            color: b.color,
+                            backgroundColor: b.isPending
+                              ? "transparent"
+                              : b.color + "22",
+                            borderLeft: `3px solid ${b.isPending ? "#94a3b8" : b.color}`,
+                            color: b.isPending ? "#94a3b8" : b.color,
+                            // Hachurage CSS natif pour les créneaux réservés
+                            backgroundImage: b.isPending
+                              ? "repeating-linear-gradient(45deg, #94a3b822 0px, #94a3b822 4px, transparent 4px, transparent 10px)"
+                              : undefined,
+                            opacity: b.isPending ? 0.7 : 1,
                           }}
                           onMouseEnter={() => setHoveredSlot(b)}
                           onMouseLeave={() => setHoveredSlot(null)}
@@ -534,6 +662,12 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                         >
                           <span className="font-medium truncate block">{b.providerNom}</span>
                           {height > 28 && <span className="opacity-70">{fmtTime(b.startAt)}–{fmtTime(b.endAt)}</span>}
+                          {b.ville && height > 36 && !b.isPending && (
+                            <span className="opacity-60 truncate block">{b.ville}</span>
+                          )}
+                          {b.isPending && height > 20 && (
+                            <span className="text-[9px] opacity-80">Réservé</span>
+                          )}
                         </div>
                       );
                     })}
@@ -545,7 +679,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                         style={{
                           left: `calc(${((MAX_COLS - 1) / MAX_COLS) * 100}% + 1px)`,
                           width: `calc(${(1 / MAX_COLS) * 100}% - 2px)`,
-                          height: HOURS.length * SLOT_H - 4,
+                          height: SLOTS.length * SLOT_H - 4,
                         }}
                         title={`+${overflowCount} prestataire${overflowCount > 1 ? "s" : ""} — filtrez par métier pour voir`}
                         onClick={(e) => {
@@ -651,6 +785,11 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
             {requiredRoles.map((role) => {
               const item = cart.find((i) => i.metierNom === role);
               const color = metierColor(role, allMetiers);
+              const isAlreadyPending = item
+                ? sessionGroup.occurrences
+                    .flatMap((o) => o.ticketSlots)
+                    .some((s) => s.ticketSlotId === item.ticketSlotId && s.statut === "pending" && s.providerId === item.providerId)
+                : false;
               return (
                 <div key={role} className="flex items-start gap-2">
                   <span className="w-2 h-2 rounded-full shrink-0 mt-1" style={{ backgroundColor: color }} />
@@ -664,6 +803,11 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                             {item.startAt.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })} · {fmtTime(item.startAt)}–{fmtTime(item.endAt)}
                           </p>
                         </div>
+                        {isAlreadyPending ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 shrink-0">
+                            En attente
+                          </span>
+                        ) : (
                         <button
                           type="button"
                           onClick={() => removeFromCart(role)}
@@ -671,6 +815,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                         >
                           ✕
                         </button>
+                        )}
                       </div>
                     ) : (
                       <p className="text-[10px] text-muted-foreground italic">Cliquez un créneau →</p>
@@ -681,17 +826,68 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
             })}
           </div>
 
+          {dateConflictWarning && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              {dateConflictWarning}
+            </p>
+          )}
+
           {sendError && <p className="text-xs text-destructive">{sendError}</p>}
 
           <Button
             className="w-full"
-            disabled={!cartComplete || isPending}
-            onClick={handleSend}
+            disabled={!cartReady || isPending}
+            onClick={() => setShowConfirm(true)}
           >
-            {isPending ? "Envoi…" : "Envoyer les demandes"}
+            {isPending ? "Envoi…" : `Envoyer les demandes (${cart.length}/${requiredRoles.length})`}
           </Button>
 
-          {!cartComplete && (
+          <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmer les demandes</AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-3 text-sm">
+                    {slotsToSend.length === 0 ? (
+                      <p>Aucune nouvelle demande — tous les prestataires sont déjà en attente.</p>
+                    ) : (
+                      <>
+                        <p>
+                          {slotsToSend.length} demande{slotsToSend.length > 1 ? "s" : ""} sera{slotsToSend.length > 1 ? "ont" : ""} envoyée{slotsToSend.length > 1 ? "s" : ""} :
+                        </p>
+                        <ul className="space-y-2">
+                          {slotsToSend.map((item) => (
+                            <li key={item.ticketSlotId} className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                              <span className="font-medium">{item.metierNom}</span>
+                              <span className="text-muted-foreground">→</span>
+                              <span>{item.providerNom}</span>
+                              <span className="text-muted-foreground text-xs ml-auto whitespace-nowrap">
+                                {item.startAt.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })} · {fmtTime(item.startAt)}–{fmtTime(item.endAt)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        {cart.length > slotsToSend.length && (
+                          <p className="text-xs text-muted-foreground border-t pt-2">
+                            {cart.length - slotsToSend.length} prestataire{cart.length - slotsToSend.length > 1 ? "s" : ""} déjà en attente — non renvoyé{cart.length - slotsToSend.length > 1 ? "s" : ""}.
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction onClick={() => { setShowConfirm(false); handleSend(); }}>
+                  {slotsToSend.length === 0 ? "OK" : `Envoyer ${slotsToSend.length > 1 ? "les " + slotsToSend.length + " demandes" : "la demande"}`}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {cart.length < requiredRoles.length && (
             <p className="text-[10px] text-muted-foreground text-center">
               {requiredRoles.length - cart.length} métier{requiredRoles.length - cart.length > 1 ? "s" : ""} manquant{requiredRoles.length - cart.length > 1 ? "s" : ""}
             </p>
@@ -701,11 +897,12 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
       {/* ── Popup cellule ── */}
       {popup && hasCart && (() => {
+        const ph = Math.floor(popup.slot);
+        const pm = popup.slot % 1 === 0.5 ? 30 : 0;
         const cellStart = new Date(popup.day);
-        cellStart.setHours(popup.hour, 0, 0, 0);
-        const cellEnd = new Date(popup.day);
-        cellEnd.setHours(popup.hour + 1, 0, 0, 0);
-        const available = getProvidersForCell(popup.day, popup.hour);
+        cellStart.setHours(ph, pm, 0, 0);
+        const cellEnd = new Date(cellStart.getTime() + 30 * 60 * 1000);
+        const available = getProvidersForCell(popup.day, popup.slot);
         const isRight = popup.x > (typeof window !== "undefined" ? window.innerWidth / 2 : 700);
 
         return (
@@ -722,7 +919,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                 <p className="font-semibold text-sm">
                   {popup.day.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                 </p>
-                <p className="text-xs text-muted-foreground">{popup.hour}h00 – {popup.hour + 1}h00</p>
+                <p className="text-xs text-muted-foreground">{fmtSlot(popup.slot)} – {fmtSlot(popup.slot + 0.5)}</p>
               </div>
               <button type="button" onClick={() => setPopup(null)} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
             </div>
@@ -749,11 +946,16 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{p.providerNom}</p>
+                            {p.ville && <p className="text-[10px] text-muted-foreground truncate">📍 {p.ville}</p>}
                           </div>
-                          {slotExists ? (
+                          {p.isPending ? (
+                            <span className="text-[10px] px-2 py-1 rounded border border-slate-300 text-slate-500 bg-slate-50 shrink-0 cursor-not-allowed">
+                              Réservé
+                            </span>
+                          ) : slotExists ? (
                             <button
                               type="button"
-                              onClick={() => addToCart(p, popup.day, popup.hour)}
+                              onClick={() => addToCart(p, popup.day, popup.slot)}
                               className={`text-xs px-2 py-1 rounded border transition-colors shrink-0 ${
                                 alreadyInCart
                                   ? "border-green-400 text-green-700 bg-green-50"
@@ -791,10 +993,16 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
             <p className="font-semibold">{hoveredSlot.providerNom}</p>
           </div>
           <p className="text-muted-foreground text-xs">{hoveredSlot.metierNom}</p>
+          {hoveredSlot.ville && (
+            <p className="text-muted-foreground text-xs">📍 {hoveredSlot.ville}</p>
+          )}
           <p className="text-xs capitalize">
             {hoveredSlot.startAt.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}
           </p>
           <p className="font-medium text-xs">{fmtTime(hoveredSlot.startAt)} – {fmtTime(hoveredSlot.endAt)}</p>
+          {hoveredSlot.isPending && (
+            <p className="text-[10px] text-slate-500 border-t pt-1">Créneau réservé (±30 min trajet)</p>
+          )}
         </div>
       )}
     </div>

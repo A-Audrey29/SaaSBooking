@@ -8,6 +8,7 @@ export const metier = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     nom: text("nom").notNull(),
+    color: text("color"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

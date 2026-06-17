@@ -16,15 +16,14 @@ interface Workshop {
   durationMin: number;
   typeId: string | null;
   typeNom: string | null;
-  defaultRoles: { nom: string; isOptional: boolean; couleur: string | null }[];
+  defaultRoles: { nom: string; isOptional: boolean; color: string | null }[];
 }
 
 interface RoleSlot {
   id: string;
   isOptional: boolean;
   ordre: number;
-  couleur: string | null;
-  metier: { nom: string };
+  metier: { nom: string; color: string | null };
 }
 
 interface RoleGroup {
@@ -61,7 +60,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
   // Step 3
   const [nom, setNom] = useState("");
   const [sessionNumber, setSessionNumber] = useState<number>(1);
-  const [seanceCount, setSeanceCount] = useState<number>(1);
+  const [seanceNumber, setSeanceNumber] = useState<number>(1);
   const [notes, setNotes] = useState("");
 
   const handleSelectWorkshop = (w: Workshop) => {
@@ -111,8 +110,8 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
     setError(null);
     // Pré-remplir le nom avec le nom de l'atelier sélectionné
     if (!nom && selectedWorkshop) setNom(selectedWorkshop.nom);
-    // Synchroniser le nombre de séances avec la config de l'atelier
-    if (selectedWorkshop) setSeanceCount(selectedWorkshop.seancesCount || 1);
+    // Réinitialiser le numéro de séance à 1 pour chaque nouvelle séance
+    setSeanceNumber(1);
     setStep(3);
   };
 
@@ -135,7 +134,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
         checkedSlotIds: checkedList,
         nom: nom.trim(),
         sessionNumber,
-        seanceCount,
+        seanceNumber,
         notes: notes.trim() || undefined,
       });
       if (result.ok) {
@@ -209,7 +208,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
                           <span
                             key={i}
                             className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border"
-                            style={r.couleur ? { borderColor: r.couleur, color: r.couleur } : undefined}
+                            style={r.color ? { borderColor: r.color, color: r.color } : undefined}
                           >
                             {r.nom}
                             {r.isOptional && <span className="opacity-60">(opt.)</span>}
@@ -247,7 +246,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
                 <Label htmlFor={slot.id} className="flex items-center gap-2 cursor-pointer">
                   <span
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: slot.couleur ?? "#888" }}
+                    style={{ backgroundColor: slot.metier.color ?? "#888" }}
                   />
                   {slot.metier.nom}
                   {slot.isOptional && (
@@ -282,7 +281,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
                   <span
                     key={s.id}
                     className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border font-medium"
-                    style={s.couleur ? { borderColor: s.couleur, color: s.couleur } : undefined}
+                    style={s.metier.color ? { borderColor: s.metier.color, color: s.metier.color } : undefined}
                   >
                     {s.metier.nom}
                   </span>
@@ -317,14 +316,14 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
 
           {/* Numéro de la séance */}
           <div className="space-y-2">
-            <Label htmlFor="seanceCount">Numéro de la séance</Label>
+            <Label htmlFor="seanceNumber">Numéro de la séance</Label>
             <Input
-              id="seanceCount"
+              id="seanceNumber"
               type="number"
               min={1}
-              max={selectedWorkshop.seancesCount || 20}
-              value={seanceCount}
-              onChange={(e) => setSeanceCount(Math.max(1, parseInt(e.target.value) || 1))}
+              max={999}
+              value={seanceNumber}
+              onChange={(e) => setSeanceNumber(Math.max(1, parseInt(e.target.value) || 1))}
               className="w-32"
             />
             <p className="text-xs text-muted-foreground">
@@ -365,7 +364,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setStep(2)}>Retour</Button>
             <Button onClick={handleSubmit} disabled={isPending}>
-              {isPending ? "Création…" : "Créer la session"}
+              {isPending ? "Création…" : "Créer la séance"}
             </Button>
           </div>
         </div>

@@ -87,8 +87,9 @@ export async function updateTicketSlotStatut(
     }
 
     if (newStatut === "empty") {
-      updateValues.providerId = null;
-      // sent_at conservé intentionnellement pour audit
+      // providerId conservé intentionnellement : le prestataire doit voir la demande
+      // annulée dans /pro/missions (badge "Annulée") jusqu'à ce qu'il la dismiss.
+      // sent_at conservé pour audit.
     }
 
     if (newStatut === "skipped" && currentStatut === "pending") {

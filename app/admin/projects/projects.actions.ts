@@ -35,7 +35,7 @@ export async function createProject(
         .returning();
 
       await logAudit(ctx, "create", "project", created.id, null, {
-        centreId: created.centreId,
+        centreId: validated.centreId,
         nom: created.nom,
       });
     });
@@ -119,7 +119,6 @@ export async function softDeleteProject(
 
       await logAudit(ctx, "soft_delete", "project", validated.id, {
         nom: before.nom,
-        centreId: before.centreId,
       }, null);
     });
 

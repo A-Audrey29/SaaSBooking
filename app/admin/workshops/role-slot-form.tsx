@@ -40,7 +40,6 @@ interface RoleSlotFormProps {
   defaultValues?: {
     id?: string;
     metierId?: string;
-    couleur?: string;
     isOptional?: boolean;
     ordre?: number;
   };
@@ -68,7 +67,6 @@ export function RoleSlotForm({
       id: defaultValues?.id,
       workshopRoleGroupId,
       metierId: defaultValues?.metierId ?? "",
-      couleur: defaultValues?.couleur ?? "",
       isOptional: defaultValues?.isOptional ?? false,
       ordre: defaultValues?.ordre ?? 0,
     },
@@ -76,13 +74,9 @@ export function RoleSlotForm({
 
   const onSubmit = (data: FormValues) => {
     startTransition(async () => {
-      const payload = {
-        ...data,
-        couleur: data.couleur?.trim() === "" ? null : data.couleur,
-      };
       const result = isEdit
-        ? await updateRoleSlot(payload as UpdateRoleSlotInput)
-        : await createRoleSlot(payload as CreateRoleSlotInput);
+        ? await updateRoleSlot(data as UpdateRoleSlotInput)
+        : await createRoleSlot(data as CreateRoleSlotInput);
 
       if (result.ok) {
         onSuccess();
@@ -115,33 +109,6 @@ export function RoleSlotForm({
                   ))}
                 </SelectContent>
               </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="couleur"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Couleur (hex)</FormLabel>
-              <FormControl>
-                <div className="flex items-center gap-2">
-                  <Input
-                    {...field}
-                    value={field.value ?? ""}
-                    placeholder="#1f3a5f"
-                    className="font-mono"
-                  />
-                  {field.value && /^#[0-9A-Fa-f]{6}$/.test(field.value) && (
-                    <span
-                      className="inline-block w-8 h-8 rounded border flex-shrink-0"
-                      style={{ backgroundColor: field.value }}
-                    />
-                  )}
-                </div>
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}

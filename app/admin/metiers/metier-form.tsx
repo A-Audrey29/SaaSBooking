@@ -16,6 +16,7 @@ import {
 import {
   CreateMetierSchema,
   UpdateMetierSchema,
+  METIER_COLORS,
   type CreateMetierInput,
   type UpdateMetierInput,
 } from "@/server/validations/metier";
@@ -33,16 +34,47 @@ interface CreateProps extends SharedProps {
 
 interface EditProps extends SharedProps {
   mode: "edit";
-  metier: { id: string; nom: string };
+  metier: { id: string; nom: string; color?: string | null };
 }
 
 export type MetierFormProps = CreateProps | EditProps;
+
+function ColorPicker({
+  value,
+  onChange,
+}: {
+  value: string | null | undefined;
+  onChange: (val: string | null) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {METIER_COLORS.map((c) => {
+        const selected = value === c.value;
+        return (
+          <button
+            key={c.value}
+            type="button"
+            title={c.label}
+            onClick={() => onChange(selected ? null : c.value)}
+            className="relative h-8 w-8 rounded-full transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            style={{
+              backgroundColor: c.value,
+              boxShadow: selected ? `0 0 0 3px white, 0 0 0 5px ${c.value}` : undefined,
+            }}
+            aria-pressed={selected}
+            aria-label={c.label}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 function CreateMetierForm({ onSuccess, onCancel }: SharedProps) {
   const [isPending, startTransition] = useTransition();
   const form = useForm<CreateMetierInput>({
     resolver: zodResolver(CreateMetierSchema),
-    defaultValues: { nom: "" },
+    defaultValues: { nom: "", color: null },
   });
 
   const onSubmit = (data: CreateMetierInput) => {
@@ -72,6 +104,19 @@ function CreateMetierForm({ onSuccess, onCancel }: SharedProps) {
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="color"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Couleur</FormLabel>
+              <FormControl>
+                <ColorPicker value={field.value} onChange={field.onChange} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         {form.formState.errors.root && (
           <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>
         )}
@@ -92,7 +137,7 @@ function EditMetierForm({ metier, onSuccess, onCancel }: EditProps) {
   const [isPending, startTransition] = useTransition();
   const form = useForm<UpdateMetierInput>({
     resolver: zodResolver(UpdateMetierSchema),
-    defaultValues: { id: metier.id, nom: metier.nom },
+    defaultValues: { id: metier.id, nom: metier.nom, color: metier.color ?? null },
   });
 
   const onSubmit = (data: UpdateMetierInput) => {
@@ -117,6 +162,19 @@ function EditMetierForm({ metier, onSuccess, onCancel }: EditProps) {
               <FormLabel>Nom du métier</FormLabel>
               <FormControl>
                 <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="color"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Couleur</FormLabel>
+              <FormControl>
+                <ColorPicker value={field.value} onChange={field.onChange} />
               </FormControl>
               <FormMessage />
             </FormItem>

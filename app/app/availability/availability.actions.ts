@@ -41,11 +41,18 @@ export async function sendCartRequests(input: SendCartInput): Promise<ActionResu
     if (!sg) return { ok: false, error: "Séance introuvable" };
     if (sg.centreId !== ctx.centreId) return { ok: false, error: "Accès non autorisé" };
 
+    // Toutes les occurrences doivent partager le même créneau exact
+    const uniqueStarts = new Set(slots.map((s) => s.startAt.getTime()));
+    if (uniqueStarts.size > 1) {
+      return { ok: false, error: "Tous les prestataires doivent être planifiés au même créneau" };
+    }
+
     for (const slot of slots) {
       // Récupérer l'occurrenceId via ticket_slot → ticket → occurrence
       const [chain] = await db
         .select({
           occurrenceId: schema.occurrence.id,
+          occurrenceStatut: schema.occurrence.statut,
           occurrenceStartAt: schema.occurrence.startAt,
         })
         .from(schema.ticketSlot)
@@ -55,8 +62,8 @@ export async function sendCartRequests(input: SendCartInput): Promise<ActionResu
 
       if (!chain) continue;
 
-      // Fixer la date sur l'occurrence seulement si elle n'en a pas encore
-      if (!chain.occurrenceStartAt) {
+      // Ne pas écraser la date d'une occurrence déjà confirmée ou terminée
+      if (chain.occurrenceStatut !== "confirmed" && chain.occurrenceStatut !== "done") {
         await db
           .update(schema.occurrence)
           .set({ startAt: slot.startAt, endAt: slot.endAt, updatedAt: new Date() })

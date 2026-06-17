@@ -1,8 +1,8 @@
 /**
- * Project schema - scoped to centre.
+ * Project schema - scoped to a single centre.
  */
 
-import { pgTable, uuid, timestamp, text, date, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, timestamp, text, date, index } from "drizzle-orm/pg-core";
 import { centre } from "./centre";
 
 export const project = pgTable(

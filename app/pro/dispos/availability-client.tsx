@@ -478,6 +478,8 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
   const [to, setTo] = useState(addDaysISO(todayISO(), 56)); // 8 semaines par défaut
   const [exceptionDate, setExceptionDate] = useState(todayISO());
   const [exceptionKind, setExceptionKind] = useState<"available" | "unavailable">("unavailable");
+  const [exceptionStartTime, setExceptionStartTime] = useState("");
+  const [exceptionEndTime, setExceptionEndTime] = useState("");
   const [activeTab, setActiveTab] = useState<"recurring" | "window" | "exceptions">("recurring");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -504,7 +506,12 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
     setError(null);
     setInfo(null);
     startTransition(async () => {
-      const res = await createDateExceptionAction({ date: exceptionDate, kind: exceptionKind });
+      const res = await createDateExceptionAction({
+        date: exceptionDate,
+        kind: exceptionKind,
+        startTime: exceptionStartTime || undefined,
+        endTime: exceptionEndTime || undefined,
+      });
       if (!res.ok) {
         setError(res.error);
         return;
@@ -665,10 +672,10 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
 
           <TabsContent value="exceptions" className="space-y-3">
             <p className="text-t-xs text-ink-500">
-              Déclarez une exception ponctuelle pour une journée précise (jour férié, congé,
-              disponibilité exceptionnelle…).
+              Déclarez une exception ponctuelle pour une date précise (jour férié, congé,
+              disponibilité exceptionnelle…). Laissez les heures vides pour bloquer ou marquer la journée entière.
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Input
                 type="date"
                 value={exceptionDate}
@@ -684,6 +691,40 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
                   <SelectItem value="available">Disponible</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="rounded-lg border border-ink-150 bg-ink-50 p-3 space-y-2">
+              <p className="text-t-xs font-medium text-ink-600">Plage horaire (optionnel)</p>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="time"
+                  value={exceptionStartTime}
+                  onChange={(e) => setExceptionStartTime(e.target.value)}
+                  className="h-8 w-28"
+                  placeholder="Début"
+                />
+                <span className="text-ink-400">→</span>
+                <Input
+                  type="time"
+                  value={exceptionEndTime}
+                  onChange={(e) => setExceptionEndTime(e.target.value)}
+                  className="h-8 w-28"
+                  placeholder="Fin"
+                />
+                {(exceptionStartTime || exceptionEndTime) && (
+                  <button
+                    onClick={() => { setExceptionStartTime(""); setExceptionEndTime(""); }}
+                    className="h-7 w-7 grid place-items-center text-ink-400 hover:text-ink-900 text-t-sm"
+                    aria-label="Réinitialiser la plage horaire"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-ink-400">
+                {exceptionStartTime && exceptionEndTime
+                  ? `Exception de ${exceptionStartTime} à ${exceptionEndTime}`
+                  : "Si vide : journée entière"}
+              </p>
             </div>
           </TabsContent>
         </Tabs>

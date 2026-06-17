@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -117,7 +118,14 @@ export function ProjectsClient({ projects, centres }: ProjectsClientProps) {
             ) : (
               projects.map((project) => (
                 <TableRow key={project.id}>
-                  <TableCell className="font-medium">{project.nom}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/admin/projects/${project.id}`}
+                      className="hover:underline focus-visible:underline outline-none"
+                    >
+                      {project.nom}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">{project.centreNom}</Badge>
                   </TableCell>

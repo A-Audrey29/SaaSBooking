@@ -106,6 +106,41 @@
       "when": 1749470000000,
       "tag": "0014_occurrence_nullable_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1749470000001,
+      "tag": "0015_user_email_unique_active",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1749470000002,
+      "tag": "0017_workshop_centre_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1749470000003,
+      "tag": "0018_metier_color",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1749470000004,
+      "tag": "0019_drop_role_slot_couleur",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1749470000005,
+      "tag": "0020_session_group_numbers",
+      "breakpoints": true
     }
   ]
 }

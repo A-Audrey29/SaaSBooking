@@ -5,7 +5,6 @@ export async function listProjects(centreId: string) {
   return db
     .select({
       id: schema.project.id,
-      centreId: schema.project.centreId,
       nom: schema.project.nom,
       description: schema.project.description,
       financeur: schema.project.financeur,
@@ -22,27 +21,25 @@ export async function listAllProjects() {
   return db
     .select({
       id: schema.project.id,
-      centreId: schema.project.centreId,
-      centreNom: schema.centre.nom,
       nom: schema.project.nom,
       description: schema.project.description,
       financeur: schema.project.financeur,
       startDate: schema.project.startDate,
       endDate: schema.project.endDate,
       createdAt: schema.project.createdAt,
+      centreId: schema.project.centreId,
+      centreNom: schema.centre.nom,
     })
     .from(schema.project)
     .innerJoin(schema.centre, eq(schema.project.centreId, schema.centre.id))
     .where(isNull(schema.project.deletedAt))
-    .orderBy(schema.centre.nom, schema.project.nom);
+    .orderBy(schema.project.nom);
 }
 
 export async function getProjectById(id: string) {
-  const [row] = await db
+  const [project] = await db
     .select({
       id: schema.project.id,
-      centreId: schema.project.centreId,
-      centreNom: schema.centre.nom,
       nom: schema.project.nom,
       description: schema.project.description,
       financeur: schema.project.financeur,
@@ -50,11 +47,14 @@ export async function getProjectById(id: string) {
       endDate: schema.project.endDate,
       createdAt: schema.project.createdAt,
       updatedAt: schema.project.updatedAt,
+      centreId: schema.project.centreId,
+      centreNom: schema.centre.nom,
     })
     .from(schema.project)
     .innerJoin(schema.centre, eq(schema.project.centreId, schema.centre.id))
     .where(and(eq(schema.project.id, id), isNull(schema.project.deletedAt)));
-  return row ?? null;
+
+  return project ?? null;
 }
 
 export async function getProjectKpis(projectId: string) {

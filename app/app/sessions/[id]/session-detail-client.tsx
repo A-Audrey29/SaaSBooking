@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { assignProviderToSlot, cancelSlotRequest, skipSlot } from "./session.actions";
+import { EmailConfirmDialog } from "@/components/email-confirm-dialog";
 import type { SessionGroupDetail } from "@/server/queries/session-group";
 import type { ProviderForSlot } from "@/server/queries/ticket-slot";
 
@@ -58,6 +60,7 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
   const [isPending, startTransition] = useTransition();
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   const badge = STATUT_BADGE[slot.statut] ?? { label: slot.statut, className: "" };
 
@@ -70,7 +73,8 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
     });
   };
 
-  const handleCancel = () => {
+  const handleCancelConfirm = () => {
+    setCancelConfirmOpen(false);
     setError(null);
     startTransition(async () => {
       const result = await cancelSlotRequest({ slotId: slot.id, sessionGroupId });
@@ -87,13 +91,21 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
   };
 
   return (
+    <>
+      <EmailConfirmDialog
+        open={cancelConfirmOpen}
+        email={slot.provider?.nom ?? ""}
+        title="Annuler la demande"
+        description="Un email d'annulation sera envoyé à"
+        confirmLabel="Confirmer l'annulation"
+        onConfirm={handleCancelConfirm}
+        onCancel={() => setCancelConfirmOpen(false)}
+        isPending={isPending}
+      />
     <div className="flex flex-col gap-2 py-2 border-b last:border-b-0">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium uppercase tracking-wide">{slot.providerRole}</span>
-        <Badge
-          variant="outline"
-          className={`text-xs ${badge.className}`}
-        >
+        <Badge variant="outline" className={`text-xs ${badge.className}`}>
           {badge.label}
         </Badge>
       </div>
@@ -147,7 +159,7 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
             size="sm"
             variant="outline"
             className="h-7 text-xs"
-            onClick={handleCancel}
+            onClick={() => setCancelConfirmOpen(true)}
             disabled={isPending}
           >
             Annuler la demande
@@ -182,32 +194,87 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
 
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
+    </>
   );
+}
+
+function buildAvailabilityUrl(sessionGroupId: string, occ: Occurrence): string {
+  const metiers = occ.ticket
+    ? [...new Set(
+        occ.ticket.slots
+          .filter((s) => s.statut !== "skipped" && s.statut !== "cancelled")
+          .map((s) => s.providerRole)
+      )]
+    : [];
+
+  const params = new URLSearchParams({ sessionGroupId, occurrenceId: occ.id });
+  if (metiers.length > 0) params.set("metiers", metiers.join(","));
+  return `/app/availability?${params.toString()}`;
 }
 
 interface OccurrenceCardProps {
   occ: Occurrence;
   providersMap: Record<string, ProviderForSlot[]>;
   sessionGroupId: string;
+  index: number;
+  total: number;
+  onPrev: () => void;
+  onNext: () => void;
 }
 
-function OccurrenceCard({ occ, providersMap, sessionGroupId }: OccurrenceCardProps) {
+function OccurrenceCard({ occ, providersMap, sessionGroupId, index, total, onPrev, onNext }: OccurrenceCardProps) {
   const badge = OCCURRENCE_STATUT_BADGE[occ.statut] ?? { label: occ.statut, className: "" };
+  const availabilityUrl = buildAvailabilityUrl(sessionGroupId, occ);
 
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="text-sm font-semibold">S{occ.index}</span>
-          <span className="text-sm text-muted-foreground ml-2">
-            {formatDate(occ.startAt)} → {formatDate(occ.endAt)}
+      {/* Header : navigation + statut */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            onClick={onPrev}
+            disabled={index === 0}
+            aria-label="Séance précédente"
+          >
+            ‹
+          </Button>
+          <span className="text-sm font-semibold">
+            Séance {occ.index} / {total}
           </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            onClick={onNext}
+            disabled={index === total - 1}
+            aria-label="Séance suivante"
+          >
+            ›
+          </Button>
         </div>
         <Badge variant="outline" className={`text-xs ${badge.className}`}>
           {badge.label}
         </Badge>
       </div>
 
+      {/* Date */}
+      <p className="text-sm text-muted-foreground">
+        {formatDate(occ.startAt)}{occ.endAt ? ` → ${formatDate(occ.endAt)}` : ""}
+      </p>
+
+      {/* Bouton planifier / modifier */}
+      {occ.statut !== "cancelled" && (
+        <Link href={availabilityUrl}>
+          <Button size="sm" variant="outline" className="h-8 text-xs w-full">
+            {occ.startAt ? "Modifier la planification" : "Planifier cette séance"}
+          </Button>
+        </Link>
+      )}
+
+      {/* Slots prestataires */}
       {occ.ticket && occ.ticket.slots.length > 0 ? (
         <div className="divide-y">
           {occ.ticket.slots.map((slot) => (
@@ -233,22 +300,26 @@ interface Props {
 }
 
 export function SessionDetailClient({ detail, providersMap, sessionGroupId }: Props) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
   if (detail.occurrences.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">Aucune séance planifiée pour cette session.</p>
     );
   }
 
+  const occ = detail.occurrences[currentIndex];
+  const total = detail.occurrences.length;
+
   return (
-    <div className="space-y-4">
-      {detail.occurrences.map((occ) => (
-        <OccurrenceCard
-          key={occ.id}
-          occ={occ}
-          providersMap={providersMap}
-          sessionGroupId={sessionGroupId}
-        />
-      ))}
-    </div>
+    <OccurrenceCard
+      occ={occ}
+      providersMap={providersMap}
+      sessionGroupId={sessionGroupId}
+      index={currentIndex}
+      total={total}
+      onPrev={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+      onNext={() => setCurrentIndex((i) => Math.min(total - 1, i + 1))}
+    />
   );
 }

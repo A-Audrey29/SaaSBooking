@@ -17,14 +17,14 @@ function startOfWeek(d: Date): Date {
 }
 
 interface Props {
-  searchParams: Promise<{ metiers?: string; sessionGroupId?: string }>;
+  searchParams: Promise<{ metiers?: string; sessionGroupId?: string; occurrenceId?: string }>;
 }
 
 export default async function AvailabilityPage({ searchParams }: Props) {
   const ctx = await requireRole("referent", "project_admin");
   if (!ctx.centreId) notFound();
 
-  const { metiers, sessionGroupId } = await searchParams;
+  const { metiers, sessionGroupId, occurrenceId } = await searchParams;
   const metierNoms = metiers
     ? metiers.split(",").map((m) => decodeURIComponent(m.trim())).filter(Boolean)
     : [];
@@ -38,7 +38,7 @@ export default async function AvailabilityPage({ searchParams }: Props) {
 
   const [providers, sessionGroup, ateliers] = await Promise.all([
     getProvidersDisposForCentre(ctx.centreId, from, to),
-    sessionGroupId ? getSessionGroupForCart(sessionGroupId, ctx.centreId) : null,
+    sessionGroupId ? getSessionGroupForCart(sessionGroupId, ctx.centreId, occurrenceId) : null,
     listWorkshopsForCentre(ctx.centreId),
   ]);
 

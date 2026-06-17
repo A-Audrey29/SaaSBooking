@@ -39,6 +39,9 @@ export const workshop = pgTable(
     projectId: uuid("project_id")
       .notNull()
       .references(() => project.id, { onDelete: "restrict" }),
+    // Catalogue : NULL = atelier global (créé par l'admin, visible par tous les centres),
+    // non-NULL = atelier privé du centre.
+    centreId: uuid("centre_id").references(() => centre.id, { onDelete: "set null" }),
     typeId: uuid("type_id").references(() => workshopType.id, { onDelete: "restrict" }),
     nom: text("nom").notNull(),
     description: text("description"),
@@ -50,6 +53,7 @@ export const workshop = pgTable(
   },
   (table) => ({
     projectIdx: index("workshop_project_idx").on(table.projectId),
+    centreIdx: index("workshop_centre_idx").on(table.centreId),
     typeIdx: index("workshop_type_idx").on(table.typeId),
   })
 );
@@ -90,7 +94,6 @@ export const workshopRoleSlot = pgTable(
     metierId: uuid("metier_id")
       .notNull()
       .references(() => metier.id, { onDelete: "restrict" }),
-    couleur: text("couleur"), // hex color, nullable
     isOptional: boolean("is_optional").notNull().default(false), // pre-unchecked in UI
     ordre: integer("ordre").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

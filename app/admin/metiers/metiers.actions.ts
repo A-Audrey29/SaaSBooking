@@ -22,7 +22,10 @@ export async function createMetier(
     await requireRole("super_admin");
     const validated = CreateMetierSchema.parse(input);
 
-    await db.insert(schema.metier).values({ nom: validated.nom });
+    await db.insert(schema.metier).values({
+      nom: validated.nom,
+      color: validated.color ?? null,
+    });
 
     revalidatePath("/admin/metiers");
     return { ok: true };
@@ -47,7 +50,7 @@ export async function updateMetier(
 
     await db
       .update(schema.metier)
-      .set({ nom: validated.nom, updatedAt: new Date() })
+      .set({ nom: validated.nom, color: validated.color ?? null, updatedAt: new Date() })
       .where(eq(schema.metier.id, validated.id));
 
     revalidatePath("/admin/metiers");

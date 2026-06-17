@@ -308,7 +308,6 @@ export async function createRoleSlot(
       .values({
         workshopRoleGroupId: validated.workshopRoleGroupId,
         metierId: validated.metierId,
-        couleur: validated.couleur ?? null,
         isOptional: validated.isOptional,
         ordre: validated.ordre,
       })
@@ -344,7 +343,6 @@ export async function updateRoleSlot(
       .update(schema.workshopRoleSlot)
       .set({
         metierId: validated.metierId,
-        couleur: validated.couleur ?? null,
         isOptional: validated.isOptional,
         ordre: validated.ordre,
         updatedAt: new Date(),

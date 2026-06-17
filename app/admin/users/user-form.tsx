@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useEffect } from "react";
+import { useTransition, useEffect, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   type UpdateUserInput,
 } from "@/server/validations/user";
 import { createUser, updateUser } from "./users.actions";
+import { EmailConfirmDialog } from "@/components/email-confirm-dialog";
 
 interface UserRow {
   id: string;
@@ -61,6 +62,8 @@ export type UserFormProps = CreateProps | EditProps;
 
 function CreateUserForm({ centres, onSuccess, onCancel }: SharedProps) {
   const [isPending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingData, setPendingData] = useState<CreateUserInput | null>(null);
 
   const form = useForm<CreateUserInput>({
     resolver: zodResolver(CreateUserSchema) as Resolver<CreateUserInput>,
@@ -81,8 +84,15 @@ function CreateUserForm({ centres, onSuccess, onCancel }: SharedProps) {
   }, [watchedRole, form]);
 
   const onSubmit = (data: CreateUserInput) => {
+    setPendingData(data);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirm = () => {
+    if (!pendingData) return;
     startTransition(async () => {
-      const result = await createUser(data);
+      const result = await createUser(pendingData);
+      setConfirmOpen(false);
       if (result.ok) {
         if (!result.emailSent) {
           // TODO: replace with sonner toast when installed
@@ -96,6 +106,17 @@ function CreateUserForm({ centres, onSuccess, onCancel }: SharedProps) {
   };
 
   return (
+    <>
+      <EmailConfirmDialog
+        open={confirmOpen}
+        email={pendingData?.email ?? ""}
+        title="Envoyer l'invitation"
+        description="Un email d'invitation sera envoyé à"
+        confirmLabel="Envoyer"
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirmOpen(false)}
+        isPending={isPending}
+      />
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
@@ -192,6 +213,7 @@ function CreateUserForm({ centres, onSuccess, onCancel }: SharedProps) {
         </div>
       </form>
     </Form>
+    </>
   );
 }
 

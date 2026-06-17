@@ -27,12 +27,17 @@ export default async function ProjectLayout({ children, params }: Props) {
         </Link>
       </div>
       <h1 className="text-2xl font-semibold tracking-tight mb-1">{project.nom}</h1>
-      <p className="text-sm text-muted-foreground mb-4">{project.centreNom}</p>
+      <p className="text-sm text-muted-foreground mb-4">
+        {project.centreNom}
+      </p>
       <Separator className="mb-4" />
       <Tabs defaultValue="overview" className="mb-6">
         <TabsList>
           <TabsTrigger value="overview" asChild>
             <Link href={`/admin/projects/${id}`}>Vue d&apos;ensemble</Link>
+          </TabsTrigger>
+          <TabsTrigger value="workshops" asChild>
+            <Link href={`/admin/projects/${id}/workshops`}>Ateliers</Link>
           </TabsTrigger>
           <TabsTrigger value="providers" asChild>
             <Link href={`/admin/projects/${id}/providers`}>Prestataires</Link>

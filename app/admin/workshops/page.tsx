@@ -18,7 +18,7 @@ export default async function WorkshopsPage() {
             where: isNull(schema.workshopRoleSlot.deletedAt),
             orderBy: (s, { asc }) => [asc(s.ordre)],
             with: {
-              metier: { columns: { id: true, nom: true } },
+              metier: { columns: { id: true, nom: true, color: true } },
             },
           },
         },

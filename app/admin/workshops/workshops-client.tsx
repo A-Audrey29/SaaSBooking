@@ -34,8 +34,7 @@ import {
 type RoleSlot = {
   id: string;
   metierId: string;
-  metier: { id: string; nom: string };
-  couleur: string | null;
+  metier: { id: string; nom: string; color: string | null };
   isOptional: boolean;
   ordre: number;
 };
@@ -234,10 +233,10 @@ export function WorkshopsClient({ workshopTypes, centres, metiers }: WorkshopsCl
                             className="flex items-center justify-between py-1"
                           >
                             <div className="flex items-center gap-2">
-                              {s.couleur && (
+                              {s.metier.color && (
                                 <span
                                   className="inline-block w-3 h-3 rounded-full border"
-                                  style={{ backgroundColor: s.couleur }}
+                                  style={{ backgroundColor: s.metier.color }}
                                 />
                               )}
                               <span className="text-sm">{s.metier.nom}</span>
@@ -368,7 +367,6 @@ export function WorkshopsClient({ workshopTypes, centres, metiers }: WorkshopsCl
                     ? {
                         id: sheetMode.slot.id,
                         metierId: sheetMode.slot.metierId,
-                        couleur: sheetMode.slot.couleur ?? undefined,
                         isOptional: sheetMode.slot.isOptional,
                         ordre: sheetMode.slot.ordre,
                       }

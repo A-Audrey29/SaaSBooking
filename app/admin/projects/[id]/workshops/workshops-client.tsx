@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -26,50 +27,61 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MetierForm } from "./metier-form";
-import { softDeleteMetier } from "./metiers.actions";
+import { WorkshopForm } from "./workshop-form";
+import { softDeleteWorkshop } from "./workshops.actions";
 
-interface Metier {
+interface WorkshopRow {
   id: string;
   nom: string;
-  color: string | null;
-  createdAt: Date;
+  description: string | null;
+  typeId: string | null;
+  typeNom: string | null;
+  seancesCount: number;
+  durationMin: number;
+  centreId: string | null;
 }
 
-interface MetiersClientProps {
-  metiers: Metier[];
+interface WorkshopType {
+  id: string;
+  nom: string;
+  code: string;
 }
 
-export function MetiersClient({ metiers }: MetiersClientProps) {
+interface WorkshopsClientProps {
+  projectId: string;
+  workshops: WorkshopRow[];
+  workshopTypes: WorkshopType[];
+}
+
+export function WorkshopsClient({ projectId, workshops, workshopTypes }: WorkshopsClientProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedMetier, setSelectedMetier] = useState<Metier | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Metier | null>(null);
+  const [selected, setSelected] = useState<WorkshopRow | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleCreate = () => {
-    setSelectedMetier(null);
+    setSelected(null);
     setSheetOpen(true);
   };
 
-  const handleEdit = (m: Metier) => {
-    setSelectedMetier(m);
+  const handleEdit = (w: WorkshopRow) => {
+    setSelected(w);
     setSheetOpen(true);
   };
-
 
   const handleSheetClose = () => {
     setSheetOpen(false);
-    setSelectedMetier(null);
+    setSelected(null);
   };
 
   const handleDeleteConfirm = () => {
-    if (!deleteTarget) return;
+    if (!deleteTargetId) return;
     setDeleteError(null);
     startTransition(async () => {
-      const result = await softDeleteMetier({ id: deleteTarget.id });
+      const result = await softDeleteWorkshop({ id: deleteTargetId });
       if (result.ok) {
-        setDeleteTarget(null);
+        setDeleteTargetId(null);
       } else {
         setDeleteError(result.error);
       }
@@ -77,10 +89,9 @@ export function MetiersClient({ metiers }: MetiersClientProps) {
   };
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 max-w-[800px] mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Métiers</h1>
-        <Button onClick={handleCreate}>+ Nouveau métier</Button>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={handleCreate}>+ Ajouter un atelier</Button>
       </div>
 
       <div className="border rounded-lg">
@@ -88,44 +99,42 @@ export function MetiersClient({ metiers }: MetiersClientProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nom</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Séances</TableHead>
+              <TableHead>Durée</TableHead>
+              <TableHead>Visibilité</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {metiers.length === 0 ? (
+            {workshops.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={2} className="text-center text-muted-foreground">
-                  Aucun métier défini
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  Aucun atelier dans ce projet
                 </TableCell>
               </TableRow>
             ) : (
-              metiers.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {m.color ? (
-                        <span
-                          className="inline-block h-4 w-4 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: m.color }}
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <span className="inline-block h-4 w-4 rounded-full flex-shrink-0 border border-dashed border-muted-foreground/40" aria-hidden="true" />
-                      )}
-                      {m.nom}
-                    </div>
+              workshops.map((w) => (
+                <TableRow key={w.id}>
+                  <TableCell className="font-medium">{w.nom}</TableCell>
+                  <TableCell>{w.typeNom ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell>{w.seancesCount}</TableCell>
+                  <TableCell>{w.durationMin} min</TableCell>
+                  <TableCell>
+                    {w.centreId ? (
+                      <Badge variant="outline">Privé</Badge>
+                    ) : (
+                      <Badge variant="secondary">Global</Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(m)}>
-                      Renommer
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(w)}>
+                      Modifier
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        setDeleteError(null);
-                        setDeleteTarget(m);
-                      }}
+                      onClick={() => { setDeleteError(null); setDeleteTargetId(w.id); }}
                       disabled={isPending}
                     >
                       Supprimer
@@ -139,23 +148,27 @@ export function MetiersClient({ metiers }: MetiersClientProps) {
       </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent>
+        <SheetContent className="overflow-y-auto">
           <SheetHeader>
             <SheetTitle>
-              {selectedMetier ? "Renommer le métier" : "Nouveau métier"}
+              {selected ? "Modifier l'atelier" : "Nouvel atelier"}
             </SheetTitle>
           </SheetHeader>
           <div className="mt-6">
-            {selectedMetier ? (
-              <MetierForm
+            {selected ? (
+              <WorkshopForm
                 mode="edit"
-                metier={selectedMetier}
+                workshop={selected}
+                projectId={projectId}
+                workshopTypes={workshopTypes}
                 onSuccess={handleSheetClose}
                 onCancel={handleSheetClose}
               />
             ) : (
-              <MetierForm
+              <WorkshopForm
                 mode="create"
+                projectId={projectId}
+                workshopTypes={workshopTypes}
                 onSuccess={handleSheetClose}
                 onCancel={handleSheetClose}
               />
@@ -165,19 +178,14 @@ export function MetiersClient({ metiers }: MetiersClientProps) {
       </Sheet>
 
       <AlertDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteTarget(null);
-            setDeleteError(null);
-          }
-        }}
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => { if (!open) { setDeleteTargetId(null); setDeleteError(null); } }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce métier ?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer cet atelier ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Le métier <strong>{deleteTarget?.nom}</strong> sera désactivé. Impossible si déjà utilisé dans un atelier ou par un prestataire.
+              L&apos;atelier sera désactivé. Cette action est réversible par un administrateur.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError && (
@@ -190,7 +198,7 @@ export function MetiersClient({ metiers }: MetiersClientProps) {
               disabled={isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isPending ? "Suppression…" : "Supprimer"}
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
