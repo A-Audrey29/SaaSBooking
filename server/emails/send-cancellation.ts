@@ -32,12 +32,13 @@ export async function sendCancellationEmail({
 
   const body = `Bonjour ${providerName},
 
-La demande vous concernant pour la session "${sessionNom}" prévue le ${dateStr} a été annulée par le référent.
+La demande vous concernant pour la session "${sessionNom}" prévue le ${dateStr} a été annulée par le référent du centre social.
 
 Si vous avez des questions, contactez directement le centre social concerné.
 
 ---
-Asanblé`;
+
+L'équipe Cap pour FEVES`;
 
   if (!process.env.RESEND_API_KEY || process.env.NODE_ENV !== "production") {
     console.log("[send-cancellation] Email non envoyé (dev/missing key)", { to, sessionNom });
@@ -49,7 +50,7 @@ Asanblé`;
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL ?? "noreply@resapresta.feves971.fr",
       to,
-      subject: `Demande annulée — ${sessionNom}`,
+      subject: `Atelier Passerelle CAPDemande annulée — ${sessionNom}`,
       text: body,
     });
     return { sent: true };
