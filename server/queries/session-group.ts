@@ -95,10 +95,12 @@ export async function listSessionGroupsForCentre(centreId: string) {
       centreId: schema.sessionGroup.centreId,
       sessionNumber: schema.sessionGroup.sessionNumber,
       seanceNumber: schema.sessionGroup.seanceNumber,
+      createdAt: schema.sessionGroup.createdAt,
       workshopNom: schema.workshop.nom,
       typeNom: schema.workshopType.nom,
       occurrencesCount: count(schema.occurrence.id),
       prochaineDateAt: min(schema.occurrence.startAt),
+      prochaineDateEndAt: min(schema.occurrence.endAt),
     })
     .from(schema.sessionGroup)
     .innerJoin(schema.workshop, eq(schema.sessionGroup.workshopId, schema.workshop.id))
@@ -122,6 +124,7 @@ export async function listSessionGroupsForCentre(centreId: string) {
       schema.sessionGroup.centreId,
       schema.sessionGroup.sessionNumber,
       schema.sessionGroup.seanceNumber,
+      schema.sessionGroup.createdAt,
       schema.workshop.nom,
       schema.workshopType.nom
     )

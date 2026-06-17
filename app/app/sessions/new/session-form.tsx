@@ -60,7 +60,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
   // Step 3
   const [nom, setNom] = useState("");
   const [sessionNumber, setSessionNumber] = useState<number>(1);
-  const [seanceCount, setSeanceCount] = useState<number>(1);
+  const [seanceNumber, setSeanceNumber] = useState<number>(1);
   const [notes, setNotes] = useState("");
 
   const handleSelectWorkshop = (w: Workshop) => {
@@ -110,8 +110,8 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
     setError(null);
     // Pré-remplir le nom avec le nom de l'atelier sélectionné
     if (!nom && selectedWorkshop) setNom(selectedWorkshop.nom);
-    // Synchroniser le nombre de séances avec la config de l'atelier
-    if (selectedWorkshop) setSeanceCount(selectedWorkshop.seancesCount || 1);
+    // Réinitialiser le numéro de séance à 1 pour chaque nouvelle séance
+    setSeanceNumber(1);
     setStep(3);
   };
 
@@ -134,7 +134,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
         checkedSlotIds: checkedList,
         nom: nom.trim(),
         sessionNumber,
-        seanceCount,
+        seanceNumber,
         notes: notes.trim() || undefined,
       });
       if (result.ok) {
@@ -316,14 +316,14 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
 
           {/* Numéro de la séance */}
           <div className="space-y-2">
-            <Label htmlFor="seanceCount">Numéro de la séance</Label>
+            <Label htmlFor="seanceNumber">Numéro de la séance</Label>
             <Input
-              id="seanceCount"
+              id="seanceNumber"
               type="number"
               min={1}
-              max={selectedWorkshop.seancesCount || 20}
-              value={seanceCount}
-              onChange={(e) => setSeanceCount(Math.max(1, parseInt(e.target.value) || 1))}
+              max={999}
+              value={seanceNumber}
+              onChange={(e) => setSeanceNumber(Math.max(1, parseInt(e.target.value) || 1))}
               className="w-32"
             />
             <p className="text-xs text-muted-foreground">

@@ -58,54 +58,52 @@ export async function createSessionGroup(
           centreId: ctx.centreId!,
           nom: validated.nom,
           sessionNumber: validated.sessionNumber,
-          seanceNumber: validated.seanceCount,
+          seanceNumber: validated.seanceNumber,
           notes: validated.notes ?? null,
           createdBy: ctx.userId,
         })
         .returning({ id: schema.sessionGroup.id });
 
-      // Crée N occurrences sans date — les dates seront fixées via le calendrier des dispos
-      for (let i = 0; i < validated.seanceCount; i++) {
-        const [occ] = await tx
-          .insert(schema.occurrence)
-          .values({
-            sessionGroupId: sg.id,
-            index: i + 1,
-            statut: "planned",
-            workshopRoleGroupId: validated.workshopRoleGroupId,
-          })
-          .returning({ id: schema.occurrence.id });
+      // Crée 1 occurrence — index = numéro de séance saisi par le référent
+      const [occ] = await tx
+        .insert(schema.occurrence)
+        .values({
+          sessionGroupId: sg.id,
+          index: validated.seanceNumber,
+          statut: "planned",
+          workshopRoleGroupId: validated.workshopRoleGroupId,
+        })
+        .returning({ id: schema.occurrence.id });
 
-        const [tkt] = await tx
-          .insert(schema.ticket)
-          .values({
-            occurrenceId: occ.id,
+      const [tkt] = await tx
+        .insert(schema.ticket)
+        .values({
+          occurrenceId: occ.id,
+          statut: "empty",
+        })
+        .returning({ id: schema.ticket.id });
+
+      for (const slot of slots) {
+        const isChecked = checkedSet.has(slot.id);
+        const isRequired = !slot.isOptional;
+
+        if (isChecked) {
+          await tx.insert(schema.ticketSlot).values({
+            ticketId: tkt.id,
+            providerRole: slot.metier.nom,
+            workshopRoleSlotId: slot.id,
             statut: "empty",
-          })
-          .returning({ id: schema.ticket.id });
-
-        for (const slot of slots) {
-          const isChecked = checkedSet.has(slot.id);
-          const isRequired = !slot.isOptional;
-
-          if (isChecked) {
-            await tx.insert(schema.ticketSlot).values({
-              ticketId: tkt.id,
-              providerRole: slot.metier.nom,
-              workshopRoleSlotId: slot.id,
-              statut: "empty",
-            });
-          } else if (isRequired) {
-            // Requis mais décoché → skipped
-            await tx.insert(schema.ticketSlot).values({
-              ticketId: tkt.id,
-              providerRole: slot.metier.nom,
-              workshopRoleSlotId: slot.id,
-              statut: "skipped",
-            });
-          }
-          // Optionnel non coché → pas de ticket_slot créé
+          });
+        } else if (isRequired) {
+          // Requis mais décoché → skipped
+          await tx.insert(schema.ticketSlot).values({
+            ticketId: tkt.id,
+            providerRole: slot.metier.nom,
+            workshopRoleSlotId: slot.id,
+            statut: "skipped",
+          });
         }
+        // Optionnel non coché → pas de ticket_slot créé
       }
 
       await logAudit(ctx, "create", "session_group", sg.id, null, {
@@ -113,7 +111,7 @@ export async function createSessionGroup(
         workshopRoleGroupId: validated.workshopRoleGroupId,
         nom: validated.nom,
         sessionNumber: validated.sessionNumber,
-        seanceCount: validated.seanceCount,
+        seanceNumber: validated.seanceNumber,
       });
 
       return sg.id;
