@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserForm } from "./user-form";
 import { softDeleteUser, resendInvitation } from "./users.actions";
+import { EmailConfirmDialog } from "@/components/email-confirm-dialog";
 
 interface User {
   id: string;
@@ -63,6 +64,7 @@ export function UsersClient({ users, centres }: UsersClientProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [resendTarget, setResendTarget] = useState<{ id: string; email: string } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -97,9 +99,11 @@ export function UsersClient({ users, centres }: UsersClientProps) {
     setSelectedUser(null);
   };
 
-  const handleResend = (id: string) => {
+  const handleResendConfirm = () => {
+    if (!resendTarget) return;
     startTransition(async () => {
-      const result = await resendInvitation({ id });
+      const result = await resendInvitation({ id: resendTarget.id });
+      setResendTarget(null);
       if (result.ok) {
         // TODO: replace with sonner toast when installed
         console.log(
@@ -210,7 +214,7 @@ export function UsersClient({ users, centres }: UsersClientProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleResend(user.id)}
+                        onClick={() => setResendTarget({ id: user.id, email: user.email })}
                         disabled={isPending}
                       >
                         Renvoyer
@@ -259,6 +263,17 @@ export function UsersClient({ users, centres }: UsersClientProps) {
           </div>
         </SheetContent>
       </Sheet>
+
+      <EmailConfirmDialog
+        open={resendTarget !== null}
+        email={resendTarget?.email ?? ""}
+        title="Renvoyer l'invitation"
+        description="Un nouvel email d'invitation sera envoyé à"
+        confirmLabel="Renvoyer"
+        onConfirm={handleResendConfirm}
+        onCancel={() => setResendTarget(null)}
+        isPending={isPending}
+      />
 
       <AlertDialog
         open={deleteTargetId !== null}

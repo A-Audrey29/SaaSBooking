@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { assignProviderToSlot, cancelSlotRequest, skipSlot } from "./session.actions";
+import { EmailConfirmDialog } from "@/components/email-confirm-dialog";
 import type { SessionGroupDetail } from "@/server/queries/session-group";
 import type { ProviderForSlot } from "@/server/queries/ticket-slot";
 
@@ -59,6 +60,7 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
   const [isPending, startTransition] = useTransition();
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   const badge = STATUT_BADGE[slot.statut] ?? { label: slot.statut, className: "" };
 
@@ -71,7 +73,8 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
     });
   };
 
-  const handleCancel = () => {
+  const handleCancelConfirm = () => {
+    setCancelConfirmOpen(false);
     setError(null);
     startTransition(async () => {
       const result = await cancelSlotRequest({ slotId: slot.id, sessionGroupId });
@@ -88,6 +91,17 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
   };
 
   return (
+    <>
+      <EmailConfirmDialog
+        open={cancelConfirmOpen}
+        email={slot.provider?.nom ?? ""}
+        title="Annuler la demande"
+        description="Un email d'annulation sera envoyé à"
+        confirmLabel="Confirmer l'annulation"
+        onConfirm={handleCancelConfirm}
+        onCancel={() => setCancelConfirmOpen(false)}
+        isPending={isPending}
+      />
     <div className="flex flex-col gap-2 py-2 border-b last:border-b-0">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium uppercase tracking-wide">{slot.providerRole}</span>
@@ -145,7 +159,7 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
             size="sm"
             variant="outline"
             className="h-7 text-xs"
-            onClick={handleCancel}
+            onClick={() => setCancelConfirmOpen(true)}
             disabled={isPending}
           >
             Annuler la demande
@@ -180,6 +194,7 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
 
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
+    </>
   );
 }
 

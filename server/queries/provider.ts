@@ -1,5 +1,31 @@
+import "server-only";
+
 import { eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/server/db/client";
+
+export async function getProviderById(providerId: string) {
+  const [row] = await db
+    .select({
+      id: schema.provider.id,
+      nom: schema.provider.nom,
+      email: schema.provider.email,
+    })
+    .from(schema.provider)
+    .where(eq(schema.provider.id, providerId));
+  return row ?? null;
+}
+
+export async function getProviderByUserId(userId: string) {
+  const [row] = await db
+    .select({
+      id: schema.provider.id,
+      nom: schema.provider.nom,
+      email: schema.provider.email,
+    })
+    .from(schema.provider)
+    .where(eq(schema.provider.userId, userId));
+  return row ?? null;
+}
 
 export async function listAllProviders() {
   return db
