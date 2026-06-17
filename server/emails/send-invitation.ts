@@ -26,7 +26,7 @@ export async function sendInvitationEmail({
 
   const body = `Bonjour ${displayName},
 
-${inviterName} vous a créé un compte sur Asanblé, la plateforme
+${inviterName} vous a créé un compte sur ResaPresta, la plateforme
 de coordination des ateliers du projet Passerelle CAP.
 
 Pour activer votre compte, choisissez votre mot de passe :
@@ -38,7 +38,7 @@ ${inviterName} de vous renvoyer une invitation.
 Votre identifiant de connexion : ${to}
 
 ---
-Asanblé`;
+L'équipe Cap pour FEVES`;
 
   if (!process.env.RESEND_API_KEY || process.env.NODE_ENV !== "production") {
     console.log("[send-invitation] Email non envoyé (dev/missing key)", {
@@ -53,7 +53,7 @@ Asanblé`;
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL ?? "noreply@resapresta.feves971.fr",
       to,
-      subject: "Votre accès à Asanblé — Configurez votre mot de passe",
+      subject: "Votre accès à ResaPresta — Configurez votre mot de passe",
       text: body,
     });
     return { sent: true };
