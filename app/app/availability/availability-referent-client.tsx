@@ -3,6 +3,11 @@
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { sendCartRequests } from "./availability.actions";
 import type { ProviderDispoRow, SessionGroupCart } from "@/server/queries/referent-availability";
 
@@ -135,8 +140,41 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
   const [hoveredSlot, setHoveredSlot] = useState<SlotBlock | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [popup, setPopup] = useState<CellPopup | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (!sessionGroup) return [];
+    const targetOcc = sessionGroup.occurrences.find(
+      (o) => o.ticketSlots.some((s) => s.statut === "pending")
+    ) ?? sessionGroup.occurrences[0];
+    if (!targetOcc?.startAt || !targetOcc?.endAt) return [];
+
+    const metierList = [...new Set(providers.map((p) => p.metierNom))].sort();
+    return targetOcc.ticketSlots
+      .filter((s) => s.statut === "pending" && s.providerId)
+      .map((s) => {
+        const prov = providers.find((p) => p.providerId === s.providerId);
+        return {
+          ticketSlotId: s.ticketSlotId,
+          providerId: s.providerId!,
+          providerNom: prov?.providerNom ?? "",
+          metierNom: s.providerRole,
+          color: metierColor(s.providerRole, metierList),
+          startAt: new Date(targetOcc.startAt!),
+          endAt: new Date(targetOcc.endAt!),
+        };
+      });
+  });
   const [sendError, setSendError] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const slotsToSend = useMemo(() => {
+    if (!sessionGroup) return [];
+    return cart.filter((item) => {
+      const existingSlot = sessionGroup.occurrences
+        .flatMap((o) => o.ticketSlots)
+        .find((s) => s.ticketSlotId === item.ticketSlotId);
+      return !(existingSlot?.statut === "pending" && existingSlot?.providerId === item.providerId);
+    });
+  }, [cart, sessionGroup]);
 
   const allMetiers = useMemo(
     () => [...new Set(providers.map((p) => p.metierNom))].sort(),
@@ -286,11 +324,11 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
   function resolveTicketSlotId(metierNom: string): string | null {
     if (!sessionGroup) return null;
-    // Première occurrence non encore planifiée (startAt null), slot non-skipped pour ce métier
     for (const occ of sessionGroup.occurrences) {
-      if (occ.startAt) continue; // déjà planifiée
       const slot = occ.ticketSlots.find(
-        (s) => s.providerRole === metierNom && (s.statut === "empty" || s.statut === "refused")
+        (s) =>
+          s.providerRole === metierNom &&
+          (s.statut === "empty" || s.statut === "refused" || s.statut === "pending")
       );
       if (slot) return slot.ticketSlotId;
     }
@@ -324,15 +362,20 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
   }
 
   const requiredRoles = sessionGroup?.requiredRoles ?? [];
-  const cartComplete = requiredRoles.length > 0 && requiredRoles.every((r) => cart.some((i) => i.metierNom === r));
+  const cartReady = cart.length > 0;
 
   function handleSend() {
-    if (!sessionGroup || !cartComplete) return;
+    if (!sessionGroup || !cartReady) return;
     setSendError(null);
     startTransition(async () => {
+      if (slotsToSend.length === 0) {
+        router.push(`/app/sessions/${sessionGroup.id}`);
+        return;
+      }
+
       const result = await sendCartRequests({
         sessionGroupId: sessionGroup.id,
-        slots: cart.map((i) => ({
+        slots: slotsToSend.map((i) => ({
           ticketSlotId: i.ticketSlotId,
           providerId: i.providerId,
           startAt: i.startAt,
@@ -651,6 +694,11 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
             {requiredRoles.map((role) => {
               const item = cart.find((i) => i.metierNom === role);
               const color = metierColor(role, allMetiers);
+              const isAlreadyPending = item
+                ? sessionGroup.occurrences
+                    .flatMap((o) => o.ticketSlots)
+                    .some((s) => s.ticketSlotId === item.ticketSlotId && s.statut === "pending" && s.providerId === item.providerId)
+                : false;
               return (
                 <div key={role} className="flex items-start gap-2">
                   <span className="w-2 h-2 rounded-full shrink-0 mt-1" style={{ backgroundColor: color }} />
@@ -664,6 +712,11 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                             {item.startAt.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })} · {fmtTime(item.startAt)}–{fmtTime(item.endAt)}
                           </p>
                         </div>
+                        {isAlreadyPending ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 shrink-0">
+                            En attente
+                          </span>
+                        ) : (
                         <button
                           type="button"
                           onClick={() => removeFromCart(role)}
@@ -671,6 +724,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                         >
                           ✕
                         </button>
+                        )}
                       </div>
                     ) : (
                       <p className="text-[10px] text-muted-foreground italic">Cliquez un créneau →</p>
@@ -685,13 +739,58 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
           <Button
             className="w-full"
-            disabled={!cartComplete || isPending}
-            onClick={handleSend}
+            disabled={!cartReady || isPending}
+            onClick={() => setShowConfirm(true)}
           >
-            {isPending ? "Envoi…" : "Envoyer les demandes"}
+            {isPending ? "Envoi…" : `Envoyer les demandes (${cart.length}/${requiredRoles.length})`}
           </Button>
 
-          {!cartComplete && (
+          <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmer les demandes</AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-3 text-sm">
+                    {slotsToSend.length === 0 ? (
+                      <p>Aucune nouvelle demande — tous les prestataires sont déjà en attente.</p>
+                    ) : (
+                      <>
+                        <p>
+                          {slotsToSend.length} demande{slotsToSend.length > 1 ? "s" : ""} sera{slotsToSend.length > 1 ? "ont" : ""} envoyée{slotsToSend.length > 1 ? "s" : ""} :
+                        </p>
+                        <ul className="space-y-2">
+                          {slotsToSend.map((item) => (
+                            <li key={item.ticketSlotId} className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                              <span className="font-medium">{item.metierNom}</span>
+                              <span className="text-muted-foreground">→</span>
+                              <span>{item.providerNom}</span>
+                              <span className="text-muted-foreground text-xs ml-auto whitespace-nowrap">
+                                {item.startAt.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })} · {fmtTime(item.startAt)}–{fmtTime(item.endAt)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        {cart.length > slotsToSend.length && (
+                          <p className="text-xs text-muted-foreground border-t pt-2">
+                            {cart.length - slotsToSend.length} prestataire{cart.length - slotsToSend.length > 1 ? "s" : ""} déjà en attente — non renvoyé{cart.length - slotsToSend.length > 1 ? "s" : ""}.
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction onClick={() => { setShowConfirm(false); handleSend(); }}>
+                  {slotsToSend.length === 0 ? "OK" : `Envoyer ${slotsToSend.length > 1 ? "les " + slotsToSend.length + " demandes" : "la demande"}`}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {cart.length < requiredRoles.length && (
             <p className="text-[10px] text-muted-foreground text-center">
               {requiredRoles.length - cart.length} métier{requiredRoles.length - cart.length > 1 ? "s" : ""} manquant{requiredRoles.length - cart.length > 1 ? "s" : ""}
             </p>

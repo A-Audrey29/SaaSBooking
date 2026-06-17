@@ -55,13 +55,11 @@ export async function sendCartRequests(input: SendCartInput): Promise<ActionResu
 
       if (!chain) continue;
 
-      // Fixer la date sur l'occurrence seulement si elle n'en a pas encore
-      if (!chain.occurrenceStartAt) {
-        await db
-          .update(schema.occurrence)
-          .set({ startAt: slot.startAt, endAt: slot.endAt, updatedAt: new Date() })
-          .where(eq(schema.occurrence.id, chain.occurrenceId));
-      }
+      // Toujours mettre à jour la date — permet de corriger une planification existante
+      await db
+        .update(schema.occurrence)
+        .set({ startAt: slot.startAt, endAt: slot.endAt, updatedAt: new Date() })
+        .where(eq(schema.occurrence.id, chain.occurrenceId));
 
       // Passer le slot en pending
       await updateTicketSlotStatut(

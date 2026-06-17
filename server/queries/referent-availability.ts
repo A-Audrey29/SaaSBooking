@@ -113,10 +113,13 @@ export interface SessionGroupCart {
 /**
  * Charge le contexte d'une séance pour le panier du référent :
  * occurrences + ticket_slots actifs.
+ * Si occurrenceId est fourni, requiredRoles sont calculés depuis cette occurrence.
+ * Sinon, depuis la première occurrence sans date (comportement par défaut post-création).
  */
 export async function getSessionGroupForCart(
   sessionGroupId: string,
-  centreId: string
+  centreId: string,
+  occurrenceId?: string
 ): Promise<SessionGroupCart | null> {
   const [sg] = await db
     .select({ id: schema.sessionGroup.id, nom: schema.sessionGroup.nom, centreId: schema.sessionGroup.centreId })
@@ -178,8 +181,12 @@ export async function getSessionGroupForCart(
 
   const occurrences = Array.from(occMap.values());
 
-  // Rôles requis = providerRoles distincts non-skipped sur la première occurrence sans date
-  const firstUnscheduled = occurrences.find((o) => !o.startAt) ?? occurrences[0];
+  // Rôles requis = providerRoles distincts non-skipped sur l'occurrence cible
+  // Si occurrenceId fourni → cibler cette occurrence, sinon première sans date
+  const targetOccurrence = occurrenceId
+    ? (occurrences.find((o) => o.occurrenceId === occurrenceId) ?? occurrences.find((o) => !o.startAt) ?? occurrences[0])
+    : (occurrences.find((o) => !o.startAt) ?? occurrences[0]);
+  const firstUnscheduled = targetOccurrence;
   const requiredRoles = firstUnscheduled
     ? [...new Set(
         firstUnscheduled.ticketSlots

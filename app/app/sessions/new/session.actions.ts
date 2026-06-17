@@ -28,7 +28,7 @@ export async function createSessionGroup(
 
     const workshop = await getWorkshopWithType(validated.workshopId);
     if (!workshop) throw new Error("Atelier introuvable");
-    if (workshop.projectCentreId !== ctx.centreId) {
+    if (workshop.centreId !== null && workshop.centreId !== ctx.centreId) {
       throw new Error("Atelier non autorisé pour ce centre");
     }
 

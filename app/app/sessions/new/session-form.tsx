@@ -16,15 +16,14 @@ interface Workshop {
   durationMin: number;
   typeId: string | null;
   typeNom: string | null;
-  defaultRoles: { nom: string; isOptional: boolean; couleur: string | null }[];
+  defaultRoles: { nom: string; isOptional: boolean; color: string | null }[];
 }
 
 interface RoleSlot {
   id: string;
   isOptional: boolean;
   ordre: number;
-  couleur: string | null;
-  metier: { nom: string };
+  metier: { nom: string; color: string | null };
 }
 
 interface RoleGroup {
@@ -209,7 +208,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
                           <span
                             key={i}
                             className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border"
-                            style={r.couleur ? { borderColor: r.couleur, color: r.couleur } : undefined}
+                            style={r.color ? { borderColor: r.color, color: r.color } : undefined}
                           >
                             {r.nom}
                             {r.isOptional && <span className="opacity-60">(opt.)</span>}
@@ -247,7 +246,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
                 <Label htmlFor={slot.id} className="flex items-center gap-2 cursor-pointer">
                   <span
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: slot.couleur ?? "#888" }}
+                    style={{ backgroundColor: slot.metier.color ?? "#888" }}
                   />
                   {slot.metier.nom}
                   {slot.isOptional && (
@@ -282,7 +281,7 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
                   <span
                     key={s.id}
                     className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border font-medium"
-                    style={s.couleur ? { borderColor: s.couleur, color: s.couleur } : undefined}
+                    style={s.metier.color ? { borderColor: s.metier.color, color: s.metier.color } : undefined}
                   >
                     {s.metier.nom}
                   </span>

@@ -17,6 +17,8 @@ Schema:
 |----|------|---------|----------|
 | BDR-019 | 2026-06-10 | Référent/UX | Calendrier dispos : vue mois + filtres multi-métiers/atelier |
 | BDR-020 | 2026-06-10 | Sécurité/Git | environment.md : placeholders génériques, jamais hostname réel |
+| BDR-021 | 2026-06-15 | Project/Centre | project_centre N-N — ANNULÉE, remplacée par BDR-022 |
+| BDR-022 | 2026-06-15 | Workshop/Centre | workshop.centreId nullable = catalogue partagé admin |
 | BDR-017 | 2026-06-09 | Référent/Dispo | Prestataires non contraints par centre en V1 |
 | BDR-018 | 2026-06-09 | Référent/UX | Redirect post-création séance → calendrier dispos filtré |
 | BDR-001 | 2026-05-11 | Auth | Better Auth (magic link V1) |
@@ -229,6 +231,21 @@ Schema:
 - **Why**: `environment.md` est tracké dans git et pushé sur `origin/main` (repo distant). Le hostname réel du projet Neon (`ep-hidden-wildflower-...`) était exposé en clair depuis le commit `888be3c` — identifiant de projet sensible même sans password.
 - **Alternatives**: Ajouter `.claude/memory/` au `.gitignore` — rejeté pour l'instant, ces fichiers servent de doc d'équipe/mémoire projet et sont utiles versionnés ; le risque est traité en gardant leur contenu non sensible par construction.
 - **Status**: active
+
+### BDR-021: project_centre N-N (soft-delete = centre quitte le projet) — ANNULÉE
+- **Date**: 2026-06-15
+- **Title**: Projet partagé entre plusieurs centres
+- **Decision**: `project.centre_id` (FK NOT NULL, 1 projet = 1 centre) remplacé par une table de liaison `project_centre(project_id, centre_id)` avec soft-delete (`deleted_at`), sur le modèle de `provider_assignment`.
+- **Why (annulation)**: Implémenté puis testé en dev (migration appliquée). Après revue avec Audrey, la granularité "projet" pour le partage est une généralité non nécessaire en V1 : le vrai besoin est "l'admin crée un catalogue d'ateliers commun, chaque centre choisit dedans" — niveau atelier, pas projet. La gestion multi-centres par projet (rejoindre/quitter un projet) est repoussée en V2 si besoin. **Remplacée par [[BDR-022]]** (`workshop.centreId` nullable). Migration 0016 + code rollback intégralement sur dev, `project` redevenu 1:1 centre.
+- **Status**: annulée — voir BDR-022.
+
+### BDR-022: workshop.centreId nullable = catalogue partagé
+- **Date**: 2026-06-15
+- **Title**: Catalogue d'ateliers admin partagé entre centres
+- **Decision**: `workshop.centreId` nullable (`onDelete: "set null"`), même convention que `workshop_type.centre_id` (déjà nullable). `NULL` = atelier du catalogue global créé par l'admin, visible par tous les centres. Non-NULL = atelier privé d'un centre. `listWorkshopsForCentre(centreId)` filtre `centre_id IS NULL OR centre_id = :centreId`. Autorisation création `session_group` : refusée si `workshop.centreId !== null && workshop.centreId !== ctx.centreId`.
+- **Why**: Remplace [[BDR-021]] (N-N project_centre, annulée) — modèle plus simple, aligné sur le besoin réel exprimé par Audrey ("admin crée une fois les ateliers pour tous les centres, qui choisissent dedans"). `project` reste un objet simple 1:1 centre (financeur, dates), sans logique de visibilité.
+- **Alternatives**: B (enum `visibility` sur `project`, `'all_centres'|'owner_only'`) — rejeté, le catalogue est une propriété de l'atelier pas du projet. A (garder N-N `project_centre`) — rejeté, généralité non confirmée nécessaire pour V1, gestion projet repoussée en V2.
+- **Status**: active. Tous les `workshop` existants restent `centre_id = NULL` après migration 0017 (visibles par tous par défaut) — à confirmer avec Audrey si certains doivent être marqués privés.
 
 ### BDR-007: dev-login route à supprimer avant prod
 - **Date**: 2026-06-03
