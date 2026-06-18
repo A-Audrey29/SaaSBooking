@@ -93,7 +93,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const userName = session?.user?.name ?? "Admin";
 
   return (
-    <AppShell brand="Asanblé" spaceLabel="Admin" userName={userName} items={items}>
+    <AppShell brand="ResaPresta" spaceLabel="Admin" userName={userName} items={items}>
       {children}
     </AppShell>
   );

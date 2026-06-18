@@ -40,7 +40,7 @@ export default async function AccountPage() {
             <div className="h-7 w-7 rounded-md bg-foreground text-background grid place-items-center text-[13px] font-semibold">
               A
             </div>
-            <span className="text-[14px] font-semibold">Asanblé</span>
+            <span className="text-[14px] font-semibold">ResaPresta</span>
           </Link>
           <Link href={backHref} className="text-[13px] text-muted-foreground hover:text-foreground">
             ← Retour

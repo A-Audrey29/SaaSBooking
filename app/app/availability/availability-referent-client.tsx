@@ -75,7 +75,7 @@ function metierColor(metierNom: string, allMetiers: string[]): string {
 // ── Constantes grille ─────────────────────────────────────────────────────────
 
 const SLOTS = Array.from({ length: 25 }, (_, i) => 7 + i * 0.5); // 7h → 19h par 30min
-const SLOT_H = 24; // hauteur px d'un slot demi-heure (48/2)
+const SLOT_H = 32; // hauteur px d'un slot demi-heure (64px/heure)
 const DOW = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
 
 /** Formate un slot décimal en "Xh00" ou "Xh30". */
@@ -581,16 +581,29 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
         {/* Grille calendrier — vue semaine */}
         {view === "week" && (
-        <div className="rounded-lg border overflow-auto" onClick={() => setPopup(null)}>
-          {/* En-tête jours */}
-          <div className="grid border-b bg-muted/30" style={{ gridTemplateColumns: "3rem repeat(7, 1fr)" }}>
-            <div className="border-r" />
+        <div className="rounded-xl border border-border overflow-hidden" onClick={() => setPopup(null)}>
+          {/* En-tête jours — sticky */}
+          <div className="grid bg-background border-b" style={{ gridTemplateColumns: "3.5rem repeat(7, 1fr)" }}>
+            <div className="border-r bg-muted/20" />
             {days.map((day, i) => {
               const isToday = isSameDay(day, new Date());
               return (
-                <div key={i} className={`py-2 text-center text-xs font-medium border-r last:border-r-0 ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                  <div className="uppercase tracking-wide">{DOW[i]}</div>
-                  <div className={`text-base font-semibold mt-0.5 ${isToday ? "w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center mx-auto" : ""}`}>
+                <div
+                  key={i}
+                  className={`py-3 text-center border-r last:border-r-0 select-none ${
+                    isToday ? "bg-primary/5" : ""
+                  }`}
+                >
+                  <div className={`text-[11px] font-medium uppercase tracking-widest mb-1 ${
+                    isToday ? "text-primary" : "text-muted-foreground"
+                  }`}>
+                    {DOW[i]}
+                  </div>
+                  <div className={`mx-auto w-8 h-8 flex items-center justify-center rounded-full text-sm font-semibold ${
+                    isToday
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-foreground"
+                  }`}>
                     {day.getDate()}
                   </div>
                 </div>
@@ -598,102 +611,141 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
             })}
           </div>
 
-          {/* Corps grille */}
-          <div className="relative" style={{ height: SLOTS.length * SLOT_H }}>
-            {/* Lignes demi-heures — label uniquement sur heures rondes */}
-            {SLOTS.map((s) => (
-              <div key={s} className={`absolute w-full flex ${s % 1 === 0 ? "border-t border-border/50" : "border-t border-border/20"}`} style={{ top: (s - gridTop) * SLOT_H }}>
-                <div className="w-12 shrink-0 pr-2 text-right text-[10px] text-muted-foreground -translate-y-2.5">
-                  {s % 1 === 0 ? `${s}h` : null}
-                </div>
-              </div>
-            ))}
-
-            {/* Colonnes jours */}
-            <div className="absolute inset-0 grid" style={{ gridTemplateColumns: "3rem repeat(7, 1fr)" }}>
-              <div className="border-r" />
-              {days.map((day, dayIdx) => {
-                const dayISO = day.toDateString();
-                const dayBlocks = blocks.filter((b) => isSameDay(b.startAt, day));
-                const allDayCols = providerColumnsPerDay.get(dayISO) ?? [];
-                const hasOverflow = allDayCols.length > MAX_COLS;
-                const overflowCount = hasOverflow ? allDayCols.length - (MAX_COLS - 1) : 0;
-
-                return (
-                  <div key={dayIdx} className="relative border-r last:border-r-0">
-                    {/* Cellules cliquables par demi-heure */}
-                    {hasCart && SLOTS.map((s) => (
-                      <div
-                        key={s}
-                        className="absolute left-0 right-0 hover:bg-primary/5 cursor-pointer transition-colors"
-                        style={{ top: (s - gridTop) * SLOT_H, height: SLOT_H }}
-                        onClick={(e) => handleCellClick(day, s, e)}
-                      />
-                    ))}
-
-                    {/* Blocs disponibilités en sous-colonnes */}
-                    {dayBlocks.map((b) => {
-                      const top = (decimalHour(b.startAt) - gridTop) * SLOT_H;
-                      const height = Math.max((decimalHour(b.endAt) - decimalHour(b.startAt)) * SLOT_H, 20);
-                      const leftPct = (b.columnIndex / b.columnCount) * 100;
-                      const widthPct = (1 / b.columnCount) * 100;
-                      return (
-                        <div
-                          key={b.id}
-                          className="absolute rounded px-1 py-0.5 text-[10px] leading-tight pointer-events-none overflow-hidden"
-                          style={{
-                            top, height,
-                            left: `calc(${leftPct}% + 1px)`,
-                            width: `calc(${widthPct}% - 2px)`,
-                            backgroundColor: b.isPending
-                              ? "transparent"
-                              : b.color + "22",
-                            borderLeft: `3px solid ${b.isPending ? "#94a3b8" : b.color}`,
-                            color: b.isPending ? "#94a3b8" : b.color,
-                            // Hachurage CSS natif pour les créneaux réservés
-                            backgroundImage: b.isPending
-                              ? "repeating-linear-gradient(45deg, #94a3b822 0px, #94a3b822 4px, transparent 4px, transparent 10px)"
-                              : undefined,
-                            opacity: b.isPending ? 0.7 : 1,
-                          }}
-                          onMouseEnter={() => setHoveredSlot(b)}
-                          onMouseLeave={() => setHoveredSlot(null)}
-                          onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
-                        >
-                          <span className="font-medium truncate block">{b.providerNom}</span>
-                          {height > 28 && <span className="opacity-70">{fmtTime(b.startAt)}–{fmtTime(b.endAt)}</span>}
-                          {b.ville && height > 36 && !b.isPending && (
-                            <span className="opacity-60 truncate block">{b.ville}</span>
-                          )}
-                          {b.isPending && height > 20 && (
-                            <span className="text-[9px] opacity-80">Réservé</span>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {/* Badge +N si overflow */}
-                    {hasOverflow && (
-                      <div
-                        className="absolute top-1 rounded text-[10px] font-semibold flex items-center justify-center bg-muted border text-muted-foreground cursor-pointer hover:bg-accent"
-                        style={{
-                          left: `calc(${((MAX_COLS - 1) / MAX_COLS) * 100}% + 1px)`,
-                          width: `calc(${(1 / MAX_COLS) * 100}% - 2px)`,
-                          height: SLOTS.length * SLOT_H - 4,
-                        }}
-                        title={`+${overflowCount} prestataire${overflowCount > 1 ? "s" : ""} — filtrez par métier pour voir`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFilterMetiers(new Set()); // reset filtre pour tout voir
-                          setFilterAtelierId("");
-                        }}
-                      >
-                        +{overflowCount}
-                      </div>
+          {/* Corps grille scrollable */}
+          <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 280px)", minHeight: 400 }}>
+            <div className="relative" style={{ height: SLOTS.length * SLOT_H }}>
+              {/* Lignes horaires */}
+              {SLOTS.map((s) => (
+                <div
+                  key={s}
+                  className="absolute w-full flex items-start pointer-events-none"
+                  style={{ top: (s - gridTop) * SLOT_H }}
+                >
+                  {/* Label heure */}
+                  <div className="w-14 shrink-0 pr-3 text-right">
+                    {s % 1 === 0 && (
+                      <span className="text-[10px] font-medium text-muted-foreground/70 -translate-y-2 inline-block">
+                        {Math.floor(s)}h
+                      </span>
                     )}
                   </div>
-                );
-              })}
+                  {/* Ligne */}
+                  <div
+                    className="flex-1"
+                    style={{
+                      borderTop: s % 1 === 0
+                        ? "1px solid hsl(var(--border) / 0.5)"
+                        : "1px dashed hsl(var(--border) / 0.25)",
+                    }}
+                  />
+                </div>
+              ))}
+
+              {/* Colonnes jours */}
+              <div className="absolute inset-0 grid" style={{ gridTemplateColumns: "3.5rem repeat(7, 1fr)" }}>
+                <div className="border-r border-border/30 bg-muted/10" />
+                {days.map((day, dayIdx) => {
+                  const dayISO = day.toDateString();
+                  const isToday = isSameDay(day, new Date());
+                  const dayBlocks = blocks.filter((b) => isSameDay(b.startAt, day));
+                  const allDayCols = providerColumnsPerDay.get(dayISO) ?? [];
+                  const hasOverflow = allDayCols.length > MAX_COLS;
+                  const overflowCount = hasOverflow ? allDayCols.length - (MAX_COLS - 1) : 0;
+
+                  return (
+                    <div
+                      key={dayIdx}
+                      className={`relative border-r last:border-r-0 border-border/30 ${
+                        isToday ? "bg-primary/[0.02]" : ""
+                      }`}
+                    >
+                      {/* Cellules cliquables par demi-heure */}
+                      {hasCart && SLOTS.map((s) => (
+                        <div
+                          key={s}
+                          className="absolute left-0 right-0 hover:bg-primary/8 cursor-pointer transition-colors rounded-sm"
+                          style={{ top: (s - gridTop) * SLOT_H, height: SLOT_H }}
+                          onClick={(e) => handleCellClick(day, s, e)}
+                        />
+                      ))}
+
+                      {/* Blocs disponibilités en sous-colonnes */}
+                      {dayBlocks.map((b) => {
+                        const top = (decimalHour(b.startAt) - gridTop) * SLOT_H;
+                        const height = Math.max((decimalHour(b.endAt) - decimalHour(b.startAt)) * SLOT_H, 24);
+                        const leftPct = (b.columnIndex / b.columnCount) * 100;
+                        const widthPct = (1 / b.columnCount) * 100;
+                        return (
+                          <div
+                            key={b.id}
+                            className="absolute overflow-hidden"
+                            style={{
+                              top: top + 1,
+                              height: height - 2,
+                              left: `calc(${leftPct}% + 2px)`,
+                              width: `calc(${widthPct}% - 4px)`,
+                              borderRadius: 6,
+                              backgroundColor: b.isPending
+                                ? "transparent"
+                                : b.color + "18",
+                              borderLeft: `3px solid ${b.isPending ? "#94a3b8" : b.color}`,
+                              backgroundImage: b.isPending
+                                ? "repeating-linear-gradient(45deg, #94a3b81a 0px, #94a3b81a 4px, transparent 4px, transparent 9px)"
+                                : undefined,
+                              opacity: b.isPending ? 0.65 : 1,
+                            }}
+                            onMouseEnter={() => setHoveredSlot(b)}
+                            onMouseLeave={() => setHoveredSlot(null)}
+                            onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                          >
+                            <div className="px-1.5 py-1 h-full flex flex-col justify-start gap-px">
+                              <span
+                                className="text-[10px] font-semibold leading-tight truncate"
+                                style={{ color: b.isPending ? "#94a3b8" : b.color }}
+                              >
+                                {b.providerNom}
+                              </span>
+                              {height >= 44 && (
+                                <span className="text-[9px] leading-tight opacity-75" style={{ color: b.isPending ? "#94a3b8" : b.color }}>
+                                  {fmtTime(b.startAt)}–{fmtTime(b.endAt)}
+                                </span>
+                              )}
+                              {b.ville && height >= 60 && !b.isPending && (
+                                <span className="text-[9px] opacity-55 truncate" style={{ color: b.color }}>
+                                  {b.ville}
+                                </span>
+                              )}
+                              {b.isPending && height >= 44 && (
+                                <span className="text-[9px] text-slate-400">Réservé</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Badge +N si overflow */}
+                      {hasOverflow && (
+                        <div
+                          className="absolute top-2 flex items-center justify-center rounded-md text-[10px] font-semibold bg-muted border border-border text-muted-foreground cursor-pointer hover:bg-accent transition-colors"
+                          style={{
+                            left: `calc(${((MAX_COLS - 1) / MAX_COLS) * 100}% + 2px)`,
+                            width: `calc(${(1 / MAX_COLS) * 100}% - 4px)`,
+                            height: SLOTS.length * SLOT_H - 16,
+                          }}
+                          title={`+${overflowCount} prestataire${overflowCount > 1 ? "s" : ""} — filtrez par métier pour voir`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFilterMetiers(new Set());
+                            setFilterAtelierId("");
+                          }}
+                        >
+                          +{overflowCount}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

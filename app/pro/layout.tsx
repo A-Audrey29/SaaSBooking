@@ -54,7 +54,7 @@ export default function ProLayout({ children }: { children: React.ReactNode }) {
   const userName = session?.user?.name ?? "Prestataire";
 
   return (
-    <AppShell brand="Asanblé" spaceLabel="Prestataire" userName={userName} items={items}>
+    <AppShell brand="ResaPresta" spaceLabel="Prestataire" userName={userName} items={items}>
       {children}
     </AppShell>
   );
