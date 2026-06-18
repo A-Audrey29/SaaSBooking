@@ -300,7 +300,11 @@ export async function getProvidersAvailableForSlot(
 
   if (candidates.length === 0) return [];
 
-  // Exclure les prestataires avec un ticketSlot pending qui chevauche [startAt, endAt]
+  // Exclure les prestataires avec un ticketSlot pending qui chevauche [startAt-30min, endAt+30min]
+  // Le buffer 30 min reflète le temps de trajet nécessaire avant/après chaque intervention.
+  const BUFFER_MS = 30 * 60 * 1000;
+  const bufferedStart = new Date(startAt.getTime() - BUFFER_MS);
+  const bufferedEnd = new Date(endAt.getTime() + BUFFER_MS);
   const candidateIds = candidates.map((c) => c.providerId);
   const pendingRows = await db
     .select({ providerId: schema.ticketSlot.providerId })
@@ -314,8 +318,8 @@ export async function getProvidersAvailableForSlot(
         isNull(schema.ticketSlot.deletedAt),
         isNull(schema.ticket.deletedAt),
         isNull(schema.occurrence.deletedAt),
-        lt(schema.occurrence.startAt, endAt),
-        gt(schema.occurrence.endAt, startAt)
+        lt(schema.occurrence.startAt, bufferedEnd),
+        gt(schema.occurrence.endAt, bufferedStart)
       )
     );
 

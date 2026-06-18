@@ -356,7 +356,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
         if (a.kind === "available" && aStart < cellEnd && aEnd > cellStart) {
           if (!seen.has(p.providerId)) {
             seen.add(p.providerId);
-            // Pending si un interval pending chevauche exactement la cellule cliquée
+            // Bloqué si buffer ±30min d'un pending chevauche ce créneau — filtre dur côté UI
             const isPending = p.pendingIntervals.some(
               (pi) => new Date(pi.startAt) < cellEnd && new Date(pi.endAt) > cellStart
             );
