@@ -19,6 +19,7 @@ Schema:
 | BDR-020 | 2026-06-10 | Sécurité/Git | environment.md : placeholders génériques, jamais hostname réel |
 | BDR-021 | 2026-06-15 | Project/Centre | project_centre N-N — ANNULÉE, remplacée par BDR-022 |
 | BDR-022 | 2026-06-15 | Workshop/Centre | workshop.centreId nullable = catalogue partagé admin |
+| BDR-024 | 2026-06-18 | Project/Centre | project_centre N-N réactivée — projet multi-centre (PasserelleCAP) |
 | BDR-023 | 2026-06-17 | Workshop/Centre | createWorkshop insère centreId=NULL (global) intentionnellement en V1 — à passer depuis le projet parent quand ateliers privés seront supportés |
 | BDR-017 | 2026-06-09 | Référent/Dispo | Prestataires non contraints par centre en V1 |
 | BDR-018 | 2026-06-09 | Référent/UX | Redirect post-création séance → calendrier dispos filtré |
@@ -247,6 +248,14 @@ Schema:
 - **Why**: Remplace [[BDR-021]] (N-N project_centre, annulée) — modèle plus simple, aligné sur le besoin réel exprimé par Audrey ("admin crée une fois les ateliers pour tous les centres, qui choisissent dedans"). `project` reste un objet simple 1:1 centre (financeur, dates), sans logique de visibilité.
 - **Alternatives**: B (enum `visibility` sur `project`, `'all_centres'|'owner_only'`) — rejeté, le catalogue est une propriété de l'atelier pas du projet. A (garder N-N `project_centre`) — rejeté, généralité non confirmée nécessaire pour V1, gestion projet repoussée en V2.
 - **Status**: active. Tous les `workshop` existants restent `centre_id = NULL` après migration 0017 (visibles par tous par défaut) — à confirmer avec Audrey si certains doivent être marqués privés.
+
+### BDR-024: project_centre N-N — projet multi-centre
+- **Date**: 2026-06-18
+- **Title**: Projet partagé entre plusieurs centres (PasserelleCAP)
+- **Decision**: Réintroduit `project_centre(project_id, centre_id, PK composite)` sans soft-delete (KISS). `project.centreId` passe NOT NULL → nullable (traçabilité centre initiateur). `listProjects(centreId)` fait un INNER JOIN `project_centre`. `createProject` reçoit `centreIds: string[]` et insère dans `project_centre` en transaction. Seul super_admin crée les projets en V1.
+- **Why**: PasserelleCAP est un programme qui regroupe N centres sociaux — tous doivent voir le projet et ses ateliers. Le modèle 1:1 `project.centre_id NOT NULL` était bloquant. Les ateliers restent globaux (`workshop.centreId = NULL`) indépendamment du projet.
+- **Alternatives**: Remettre soft-delete sur `project_centre` (comme BDR-021) — rejeté KISS, pas de besoin "quitter un projet" en V1. Ajouter `centreId` nullable direct sans table de liaison — rejeté, perd l'information des N centres participants.
+- **Status**: active — migration 0020_lean_grandmaster appliquée sur dev.
 
 ### BDR-007: dev-login route à supprimer avant prod
 - **Date**: 2026-06-03
