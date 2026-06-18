@@ -141,6 +141,13 @@
       "when": 1749470000005,
       "tag": "0020_session_group_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1781776546243,
+      "tag": "0020_lean_grandmaster",
+      "breakpoints": true
     }
   ]
 }

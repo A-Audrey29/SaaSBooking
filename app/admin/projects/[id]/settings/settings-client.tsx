@@ -17,9 +17,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface ProjectCentre {
+  id: string;
+  nom: string;
+}
+
 interface ProjectRow {
   id: string;
-  centreId: string;
+  centres: ProjectCentre[];
   nom: string;
   description: string | null;
   financeur: string | null;

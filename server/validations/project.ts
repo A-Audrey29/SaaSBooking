@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const CreateProjectSchema = z.object({
-  centreId: z.string().uuid(),
+  centreIds: z.array(z.string().uuid()).min(1, "Au moins un centre requis"),
   nom: z.string().min(2).max(200).trim(),
   description: z.string().max(1000).trim().optional(),
   financeur: z.string().max(200).trim().optional(),

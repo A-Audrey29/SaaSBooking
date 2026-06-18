@@ -25,7 +25,6 @@ export async function createProject(
       const [created] = await tx
         .insert(schema.project)
         .values({
-          centreId: validated.centreId,
           nom: validated.nom,
           description: validated.description ?? null,
           financeur: validated.financeur ?? null,
@@ -34,8 +33,15 @@ export async function createProject(
         })
         .returning();
 
+      await tx.insert(schema.projectCentre).values(
+        validated.centreIds.map((centreId) => ({
+          projectId: created.id,
+          centreId,
+        }))
+      );
+
       await logAudit(ctx, "create", "project", created.id, null, {
-        centreId: validated.centreId,
+        centreIds: validated.centreIds,
         nom: created.nom,
       });
     });

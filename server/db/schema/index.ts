@@ -4,6 +4,7 @@ export * from "./centre";
 export * from "./metier";
 export * from "./occurrence";
 export * from "./project";
+export * from "./project-centre";
 export * from "./provider";
 export * from "./session";
 export * from "./ticket";
