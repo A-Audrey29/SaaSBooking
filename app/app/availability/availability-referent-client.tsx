@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -176,6 +176,8 @@ interface Props {
 export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup, ateliers }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   const [view, setView] = useState<"week" | "month">("week");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
@@ -184,6 +186,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
   const [filterAtelierId, setFilterAtelierId] = useState<string>("");
   const [hoveredSlot, setHoveredSlot] = useState<SlotBlock | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [hoveredBlockSlot, setHoveredBlockSlot] = useState<{ blockId: string; slot: number } | null>(null);
   const [popup, setPopup] = useState<CellPopup | null>(null);
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (!sessionGroup) return [];
@@ -625,9 +628,9 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
         {view === "week" && (
         <div className="rounded-xl border border-border shadow-sm overflow-hidden" onClick={() => setPopup(null)}>
           {/* Scroll container — le sticky header vit à l'intérieur */}
-          <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 280px)", minHeight: 400 }}>
+          <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 280px)", minHeight: 400 }}>
           {/* En-tête jours sticky dans le scroll container */}
-          <div className="sticky top-0 z-30 grid bg-background/95 backdrop-blur-sm border-b shadow-sm" style={{ gridTemplateColumns: "3rem repeat(7, 1fr)" }}>
+          <div ref={headerRef} className="sticky top-0 z-30 grid bg-background/95 backdrop-blur-sm border-b shadow-sm" style={{ gridTemplateColumns: "3rem repeat(7, 1fr)" }}>
             <div className="border-r border-border/40 bg-muted/30" />
             {days.map((day, i) => {
               const isToday = isSameDay(day, new Date());
@@ -666,7 +669,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                 >
                   <div className="w-12 shrink-0 pr-2 text-right">
                     {s % 1 === 0 && (
-                      <span className="text-[10px] font-medium text-muted-foreground/50 -translate-y-2 inline-block">
+                      <span className="text-[10px] font-semibold inline-block" style={{ color: "#1a1a1a" }}>
                         {Math.floor(s)}h
                       </span>
                     )}
@@ -675,8 +678,8 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                     className="flex-1"
                     style={{
                       borderTop: s % 1 === 0
-                        ? "1px solid hsl(var(--border) / 0.6)"
-                        : "1px dashed hsl(var(--border) / 0.2)",
+                        ? "1px solid #9B9A97"
+                        : "1px solid #D3D2D0",
                     }}
                   />
                 </div>
@@ -684,7 +687,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
               {/* Colonnes jours */}
               <div className="absolute inset-0 grid" style={{ gridTemplateColumns: "3rem repeat(7, 1fr)" }}>
-                <div className="border-r border-border/30 bg-muted/10" />
+                <div className="border-r bg-muted/10" style={{ borderColor: "#9B9A97" }} />
                 {days.map((day, dayIdx) => {
                   const dayISO = day.toDateString();
                   const isToday = isSameDay(day, new Date());
@@ -696,9 +699,10 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                   return (
                     <div
                       key={dayIdx}
-                      className={`relative border-r last:border-r-0 border-border/30 ${
+                      className={`relative border-r last:border-r-0 ${
                         isToday ? "bg-primary/[0.025]" : ""
                       }`}
+                      style={{ borderColor: "#9B9A97" }}
                     >
                       {/* Cellules cliquables par demi-heure — z-10, s'arrête avant slot sentinelle 21h */}
                       {hasCart && SLOTS_CLICKABLE.map((s) => (
@@ -737,9 +741,31 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                               cursor: hasCart ? "pointer" : "default",
                             }}
                             onMouseEnter={() => setHoveredSlot(b)}
-                            onMouseLeave={() => setHoveredSlot(null)}
-                            onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
-                            onClick={hasCart ? (e) => handleCellClick(day, decimalHour(b.startAt), e) : undefined}
+                            onMouseLeave={() => { setHoveredSlot(null); setHoveredBlockSlot(null); }}
+                            onMouseMove={(e) => {
+                              setMousePos({ x: e.clientX, y: e.clientY });
+                              if (!hasCart) return;
+                              const container = scrollRef.current;
+                              if (!container) return;
+                              const rect = container.getBoundingClientRect();
+                              const headerH = headerRef.current?.offsetHeight ?? 0;
+                              const relY = e.clientY - rect.top + container.scrollTop - headerH;
+                              const rawSlot = gridTop + relY / (SLOT_H * 2);
+                              const snapped = Math.floor(rawSlot * 2) / 2;
+                              const clamped = Math.max(SLOTS[0], Math.min(SLOTS_CLICKABLE[SLOTS_CLICKABLE.length - 1], snapped));
+                              setHoveredBlockSlot({ blockId: b.id, slot: clamped });
+                            }}
+                            onClick={hasCart ? (e) => {
+                              const container = scrollRef.current;
+                              if (!container) return handleCellClick(day, decimalHour(b.startAt), e);
+                              const rect = container.getBoundingClientRect();
+                              const headerH = headerRef.current?.offsetHeight ?? 0;
+                              const relY = e.clientY - rect.top + container.scrollTop - headerH;
+                              const rawSlot = gridTop + relY / (SLOT_H * 2);
+                              const snapped = Math.floor(rawSlot * 2) / 2;
+                              const clamped = Math.max(SLOTS[0], Math.min(SLOTS_CLICKABLE[SLOTS_CLICKABLE.length - 1], snapped));
+                              handleCellClick(day, clamped, e);
+                            } : undefined}
                           >
                             <div className="px-1.5 py-1 h-full flex flex-col justify-start gap-px overflow-hidden">
                               <span
@@ -762,6 +788,21 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                                 <span className="text-[9px] text-slate-400 font-medium">Réservé</span>
                               )}
                             </div>
+                            {hasCart && hoveredBlockSlot?.blockId === b.id && (() => {
+                              const slotTop = (hoveredBlockSlot.slot - decimalHour(b.startAt)) * SLOT_H * 2;
+                              return (
+                                <div
+                                  className="absolute left-0 right-0 pointer-events-none"
+                                  style={{
+                                    top: Math.max(0, slotTop),
+                                    height: SLOT_H,
+                                    backgroundColor: "rgba(255,255,255,0.35)",
+                                    borderTop: "1px solid rgba(255,255,255,0.6)",
+                                    borderBottom: "1px solid rgba(255,255,255,0.6)",
+                                  }}
+                                />
+                              );
+                            })()}
                           </div>
                         );
                       })}

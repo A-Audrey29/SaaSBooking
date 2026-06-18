@@ -21,17 +21,26 @@ export async function getMyPendingAndCancelledSlots(providerId: string) {
       occurrenceIndex: schema.occurrence.index,
       sessionGroupId: schema.sessionGroup.id,
       sessionNom: schema.sessionGroup.nom,
+      sessionNumber: schema.sessionGroup.sessionNumber,
+      seanceNumber: schema.sessionGroup.seanceNumber,
       workshopNom: schema.workshop.nom,
+      centreNom: schema.centre.nom,
+      centreAdresse: schema.centre.adresse,
+      centreVille: schema.centre.ville,
+      referentName: schema.user.name,
+      referentEmail: schema.user.email,
     })
     .from(schema.ticketSlot)
     .innerJoin(schema.ticket, eq(schema.ticketSlot.ticketId, schema.ticket.id))
     .innerJoin(schema.occurrence, eq(schema.ticket.occurrenceId, schema.occurrence.id))
     .innerJoin(schema.sessionGroup, eq(schema.occurrence.sessionGroupId, schema.sessionGroup.id))
     .innerJoin(schema.workshop, eq(schema.sessionGroup.workshopId, schema.workshop.id))
+    .innerJoin(schema.centre, eq(schema.sessionGroup.centreId, schema.centre.id))
+    .leftJoin(schema.user, eq(schema.sessionGroup.createdBy, schema.user.id))
     .where(
       and(
         eq(schema.ticketSlot.providerId, providerId),
-        inArray(schema.ticketSlot.statut, ["pending", "empty"]),
+        inArray(schema.ticketSlot.statut, ["pending", "empty", "confirmed"]),
         isNotNull(schema.ticketSlot.sentAt),
         isNull(schema.ticketSlot.deletedAt),
         isNull(schema.ticket.deletedAt),
