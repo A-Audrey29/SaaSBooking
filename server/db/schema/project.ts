@@ -9,9 +9,8 @@ export const project = pgTable(
   "project",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    centreId: uuid("centre_id")
-      .notNull()
-      .references(() => centre.id, { onDelete: "restrict" }),
+    // NULL = projet global FEVES (multi-centre via project_centre). Non-NULL = centre initiateur conservé pour traçabilité.
+    centreId: uuid("centre_id").references(() => centre.id, { onDelete: "set null" }),
     nom: text("nom").notNull(),
     description: text("description"),
     financeur: text("financeur"),

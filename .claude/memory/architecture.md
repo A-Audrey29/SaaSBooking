@@ -55,18 +55,20 @@
 ## Modèle données (hiérarchie)
 
 ```
-Centre → Project → Workshop → SessionGroup → Occurrence → Ticket → TicketSlot
-                   Workshop.centreId nullable (catalogue global admin, BDR-022)
-                                                Occurrence.startAt/endAt nullable (dates fixées après création)
+Centre ←── project_centre ──→ Project → Workshop → SessionGroup → Occurrence → Ticket → TicketSlot
+                                         Workshop.centreId nullable (catalogue global admin, BDR-022)
+                                                              Occurrence.startAt/endAt nullable (dates fixées après création)
 ```
 
-### Tables schema (20)
+Un projet peut concerner N centres via `project_centre` (BDR-024). `project.centreId` reste nullable (traçabilité centre initiateur).
+
+### Tables schema (21)
 
 **Auth (Better Auth) :** user (étendu), session, account, verification
 
 **Référentiels :** centre, metier, workshop_type, workshop_role_group, workshop_role_slot
 
-**Instances :** project, workshop, session_group, occurrence, ticket, ticket_slot
+**Instances :** project, project_centre, workshop, session_group, occurrence, ticket, ticket_slot
 
 **Prestataires :** provider, provider_assignment, provider_availability
 

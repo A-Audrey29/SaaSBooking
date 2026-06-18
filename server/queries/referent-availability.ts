@@ -3,6 +3,90 @@ import "server-only";
 import { eq, isNull, and, inArray, lte, gte, asc, lt, gt } from "drizzle-orm";
 import { db, schema } from "@/server/db/client";
 
+// ── Paramètres URL passés depuis le formulaire de création (mode "new") ───────
+
+export interface NewSessionParams {
+  workshopId: string;
+  workshopRoleGroupId: string;
+  checkedSlotIds: string[]; // ids des workshopRoleSlots cochés
+  nom: string;
+  sessionNumber: number;
+  seanceNumber: number;
+  notes?: string;
+  metierNoms: string[]; // métiers des slots cochés
+}
+
+/**
+ * Construit un SessionGroupCart synthétique (sans écriture DB) depuis les
+ * paramètres URL transmis par le formulaire de création.
+ * Retourne null si les params sont invalides ou le groupe introuvable.
+ */
+export async function buildSyntheticCart(
+  params: NewSessionParams
+): Promise<SessionGroupCart | null> {
+  // Charger la durée de l'atelier
+  const [ws] = await db
+    .select({ durationMin: schema.workshop.durationMin })
+    .from(schema.workshop)
+    .where(and(eq(schema.workshop.id, params.workshopId), isNull(schema.workshop.deletedAt)));
+
+  if (!ws) return null;
+
+  // Charger les slots du groupe pour obtenir les noms de métier
+  const slots = await db
+    .select({
+      id: schema.workshopRoleSlot.id,
+      isOptional: schema.workshopRoleSlot.isOptional,
+      metierNom: schema.metier.nom,
+    })
+    .from(schema.workshopRoleSlot)
+    .innerJoin(schema.metier, eq(schema.workshopRoleSlot.metierId, schema.metier.id))
+    .where(
+      and(
+        eq(schema.workshopRoleSlot.workshopRoleGroupId, params.workshopRoleGroupId),
+        isNull(schema.workshopRoleSlot.deletedAt)
+      )
+    );
+
+  if (slots.length === 0) return null;
+
+  const checkedSet = new Set(params.checkedSlotIds);
+
+  // Rôles requis = slots cochés (non-optionnels ou optionnels cochés intentionnellement)
+  const requiredRoles = slots
+    .filter((s) => checkedSet.has(s.id))
+    .map((s) => s.metierNom);
+
+  if (requiredRoles.length === 0) return null;
+
+  // Une occurrence synthétique avec des ticket_slots virtuels (id = "" sentinel)
+  const syntheticOccurrence: CartOccurrence = {
+    occurrenceId: "",
+    index: params.seanceNumber,
+    statut: "planned",
+    startAt: null,
+    endAt: null,
+    ticketSlots: slots
+      .filter((s) => checkedSet.has(s.id))
+      .map((s) => ({
+        ticketSlotId: "", // pas encore en DB
+        providerRole: s.metierNom,
+        statut: "empty",
+        providerId: null,
+      })),
+  };
+
+  return {
+    id: "", // sentinel : mode "new", pas encore en DB
+    nom: params.nom,
+    durationMin: ws.durationMin,
+    occurrences: [syntheticOccurrence],
+    requiredRoles,
+    // Données de création portées pour sendCartRequests
+    newSessionParams: params,
+  };
+}
+
 export interface ProviderDispoRow {
   providerId: string;
   providerNom: string;
@@ -151,12 +235,14 @@ export interface CartOccurrence {
 }
 
 export interface SessionGroupCart {
-  id: string;
+  id: string; // "" = mode new (pas encore en DB)
   nom: string;
   durationMin: number;
   occurrences: CartOccurrence[];
   /** Métiers distincts requis (providerRole non-skipped) */
   requiredRoles: string[];
+  /** Présent uniquement en mode "new" — données pour créer la session_group à l'envoi */
+  newSessionParams?: NewSessionParams;
 }
 
 /**
@@ -300,7 +386,11 @@ export async function getProvidersAvailableForSlot(
 
   if (candidates.length === 0) return [];
 
-  // Exclure les prestataires avec un ticketSlot pending qui chevauche [startAt, endAt]
+  // Exclure les prestataires avec un ticketSlot pending qui chevauche [startAt-30min, endAt+30min]
+  // Le buffer 30 min reflète le temps de trajet nécessaire avant/après chaque intervention.
+  const BUFFER_MS = 30 * 60 * 1000;
+  const bufferedStart = new Date(startAt.getTime() - BUFFER_MS);
+  const bufferedEnd = new Date(endAt.getTime() + BUFFER_MS);
   const candidateIds = candidates.map((c) => c.providerId);
   const pendingRows = await db
     .select({ providerId: schema.ticketSlot.providerId })
@@ -314,8 +404,8 @@ export async function getProvidersAvailableForSlot(
         isNull(schema.ticketSlot.deletedAt),
         isNull(schema.ticket.deletedAt),
         isNull(schema.occurrence.deletedAt),
-        lt(schema.occurrence.startAt, endAt),
-        gt(schema.occurrence.endAt, startAt)
+        lt(schema.occurrence.startAt, bufferedEnd),
+        gt(schema.occurrence.endAt, bufferedStart)
       )
     );
 

@@ -6,7 +6,7 @@ export default async function AdminPage() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Espace Admin</h1>
-      <p className="text-muted-foreground">Bienvenue dans l'espace d'administration.</p>
+      <p className="text-muted-foreground">Bienvenue dans l&apos;espace d&apos;administration.</p>
     </div>
   );
 }

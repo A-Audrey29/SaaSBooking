@@ -100,7 +100,7 @@ export function WorkshopQuickCreateDrawer({
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Catalogue</p>
           <SheetTitle>Nouvel atelier</SheetTitle>
           <SheetDescription className="sr-only">
-            Créer un nouveau type d'atelier avec ses rôles métier requis.
+            Créer un nouveau type d&apos;atelier avec ses rôles métier requis.
           </SheetDescription>
         </SheetHeader>
 
@@ -113,7 +113,7 @@ export function WorkshopQuickCreateDrawer({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                    Nom de l'atelier
+                    Nom de l&apos;atelier
                   </FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="ex. Gestion des émotions" />

@@ -42,8 +42,8 @@ import {
 import type { ProviderAvailabilityRow } from "@/server/queries/provider-availability";
 import type { ProviderBookingRow } from "@/server/queries/provider-bookings";
 
-const HOURS = Array.from({ length: 11 }, (_, i) => 8 + i); // 8h → 18h
-const SLOT_H = 56;
+const SLOTS_PRO = Array.from({ length: 21 }, (_, i) => 8 + i * 0.5); // 8h → 18h par 30 min
+const SLOT_H = 32; // 32px par demi-heure = 64px/h (uniforme avec calendrier référent)
 const DOW_LABELS = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
 
 interface Props {
@@ -104,19 +104,20 @@ export function AvailabilityClient({ initialAvailabilities, initialBookings }: P
 
   const selectedBooking = bookings.find((b) => b.occurrenceId === selected) ?? null;
 
-  /** Une dispo chevauche-t-elle la cellule [hour, hour+1) ce jour GP ? */
-  function isAvail(dayISO: string, hour: number): boolean {
+  /** Une dispo chevauche-t-elle le slot demi-heure [slot, slot+0.5) ce jour GP ? */
+  function isAvail(dayISO: string, slot: number): boolean {
     return avails.some((a) => {
       if (gpDayISO(a.start) !== dayISO) return false;
       const sh = gpDecimalHour(a.start);
       const eh = gpDecimalHour(a.end);
-      return sh < hour + 1 && eh > hour;
+      return sh < slot + 0.5 && eh > slot;
     });
   }
 
-  /** Heures dispo dans la fenêtre 8h–18h, pour le badge mois. */
+  /** Demi-heures dispo dans 8h–18h, pour le badge mois (affiché en heures arrondies). */
   function availHours(dayISO: string): number {
-    return HOURS.filter((h) => isAvail(dayISO, h)).length;
+    const halfHours = SLOTS_PRO.filter((s) => isAvail(dayISO, s)).length;
+    return Math.round(halfHours / 2);
   }
 
   function bookingsForDay(dayISO: string) {
@@ -214,7 +215,7 @@ function WeekGrid({
   onPrev: () => void;
   onToday: () => void;
   onNext: () => void;
-  isAvail: (dayISO: string, hour: number) => boolean;
+  isAvail: (dayISO: string, slot: number) => boolean;
   bookingsForDay: (dayISO: string) => Array<ProviderBookingRow & { start: Date; end: Date }>;
   onBookingClick: (id: string) => void;
 }) {
@@ -257,58 +258,74 @@ function WeekGrid({
           })}
         </div>
 
-        {/* Grille heures */}
-        <div className="relative grid" style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}>
-          <div>
-            {HOURS.map((h) => (
+        {/* Grille slots 30 min */}
+        <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 280px)", minHeight: 400 }}>
+          <div className="relative" style={{ height: SLOTS_PRO.length * SLOT_H }}>
+            {/* Colonne labels + lignes horaires */}
+            {SLOTS_PRO.map((s) => (
               <div
-                key={h}
-                className="text-right pr-2 border-r border-b border-ink-150 text-[10px] text-ink-400"
-                style={{ height: SLOT_H }}
+                key={s}
+                className="absolute w-full flex items-start pointer-events-none"
+                style={{ top: (s - 8) * SLOT_H * 2 }}
               >
-                <span className="-mt-1.5 inline-block">{h}h</span>
+                <div className="w-[60px] shrink-0 pr-3 text-right">
+                  {s % 1 === 0 && (
+                    <span className="text-[10px] font-medium text-ink-400 -translate-y-2 inline-block">{s}h</span>
+                  )}
+                </div>
+                <div
+                  className="flex-1"
+                  style={{
+                    borderTop: s % 1 === 0
+                      ? "1px solid hsl(var(--border) / 0.5)"
+                      : "1px dashed hsl(var(--border) / 0.25)",
+                  }}
+                />
               </div>
             ))}
+
+            {/* Colonnes jours */}
+            <div className="absolute inset-0 grid" style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}>
+              <div className="border-r border-ink-150" />
+              {days.map((d) => {
+                const events = bookingsForDay(d);
+                return (
+                  <div key={d} className="relative border-r border-ink-150 last:border-r-0">
+                    {SLOTS_PRO.map((s) => {
+                      const avail = isAvail(d, s);
+                      return (
+                        <div
+                          key={s}
+                          className={`absolute left-0 right-0 ${avail ? "bg-s-confirmed-bg" : ""}`}
+                          style={{ top: (s - 8) * SLOT_H * 2, height: SLOT_H }}
+                        />
+                      );
+                    })}
+                    {events.map((b) => {
+                      const startH = gpDecimalHour(b.start);
+                      const endH = gpDecimalHour(b.end);
+                      const top = (startH - 8) * SLOT_H * 2;
+                      const height = Math.max((endH - startH) * SLOT_H * 2, 24);
+                      return (
+                        <button
+                          key={b.ticketSlotId}
+                          onClick={() => onBookingClick(b.occurrenceId)}
+                          className="absolute left-1 right-1 rounded-md border-2 border-brand bg-brand-soft px-2 py-1.5 text-left overflow-hidden hover:shadow-md transition-shadow z-10"
+                          style={{ top, height, color: "var(--brand-ink)" }}
+                        >
+                          <div className="text-t-xs font-semibold truncate">{b.workshopNom}</div>
+                          <div className="text-[10px] truncate opacity-90">{b.centreNom}</div>
+                          <div className="text-[10px] mt-0.5 opacity-75">
+                            {fmtTime(b.start)} · S{b.index} · {b.sessionNom}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          {days.map((d) => {
-            const events = bookingsForDay(d);
-            return (
-              <div key={d} className="relative border-r border-ink-150 last:border-r-0">
-                {HOURS.map((h) => {
-                  const avail = isAvail(d, h);
-                  return (
-                    <div
-                      key={h}
-                      className={`w-full block border-b border-ink-150 ${
-                        avail ? "bg-s-confirmed-bg" : "bg-ink-50"
-                      }`}
-                      style={{ height: SLOT_H }}
-                    />
-                  );
-                })}
-                {events.map((b) => {
-                  const startH = gpDecimalHour(b.start);
-                  const endH = gpDecimalHour(b.end);
-                  const top = (startH - 8) * SLOT_H;
-                  const height = Math.max((endH - startH) * SLOT_H, 24);
-                  return (
-                    <button
-                      key={b.ticketSlotId}
-                      onClick={() => onBookingClick(b.occurrenceId)}
-                      className="absolute left-1 right-1 rounded-md border-2 border-brand bg-brand-soft px-2 py-1.5 text-left overflow-hidden hover:shadow-md transition-shadow"
-                      style={{ top, height, color: "var(--brand-ink)" }}
-                    >
-                      <div className="text-t-xs font-semibold truncate">{b.workshopNom}</div>
-                      <div className="text-[10px] truncate opacity-90">{b.centreNom}</div>
-                      <div className="text-[10px] mt-0.5 opacity-75">
-                        {fmtTime(b.start)} · S{b.index} · {b.sessionNom}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
         </div>
       </div>
     </>

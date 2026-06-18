@@ -28,7 +28,7 @@ export default async function ProjectLayout({ children, params }: Props) {
       </div>
       <h1 className="text-2xl font-semibold tracking-tight mb-1">{project.nom}</h1>
       <p className="text-sm text-muted-foreground mb-4">
-        {project.centreNom}
+        {project.centres.map((c) => c.nom).join(", ") || "—"}
       </p>
       <Separator className="mb-4" />
       <Tabs defaultValue="overview" className="mb-6">
@@ -41,6 +41,9 @@ export default async function ProjectLayout({ children, params }: Props) {
           </TabsTrigger>
           <TabsTrigger value="providers" asChild>
             <Link href={`/admin/projects/${id}/providers`}>Prestataires</Link>
+          </TabsTrigger>
+          <TabsTrigger value="sessions" asChild>
+            <Link href={`/admin/projects/${id}/sessions`}>Séances</Link>
           </TabsTrigger>
           <TabsTrigger value="settings" asChild>
             <Link href={`/admin/projects/${id}/settings`}>Paramètres</Link>

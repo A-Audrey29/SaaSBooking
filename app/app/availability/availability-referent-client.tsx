@@ -74,7 +74,9 @@ function metierColor(metierNom: string, allMetiers: string[]): string {
 
 // ── Constantes grille ─────────────────────────────────────────────────────────
 
-const SLOTS = Array.from({ length: 25 }, (_, i) => 7 + i * 0.5); // 7h → 19h par 30min
+// 7h → 21h inclus — le dernier slot (21h) sert de ligne de fermeture uniquement
+const SLOTS = Array.from({ length: 29 }, (_, i) => 7 + i * 0.5); // 7h → 21h par 30min
+const SLOTS_CLICKABLE = SLOTS.slice(0, -1); // 7h → 20h30 (pas le dernier slot sentinelle)
 const SLOT_H = 32; // hauteur px d'un slot demi-heure (64px/heure)
 const DOW = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
 
@@ -356,7 +358,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
         if (a.kind === "available" && aStart < cellEnd && aEnd > cellStart) {
           if (!seen.has(p.providerId)) {
             seen.add(p.providerId);
-            // Pending si un interval pending chevauche exactement la cellule cliquée
+            // Bloqué si buffer ±30min d'un pending chevauche ce créneau — filtre dur côté UI
             const isPending = p.pendingIntervals.some(
               (pi) => new Date(pi.startAt) < cellEnd && new Date(pi.endAt) > cellStart
             );
@@ -386,8 +388,15 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
   // ── Panier ────────────────────────────────────────────────────────────────
 
+  const isNewMode = sessionGroup?.id === "";
+
   function resolveTicketSlotId(metierNom: string): string | null {
     if (!sessionGroup) return null;
+    // Mode "new" : pas de ticketSlotId en DB — on utilise le metierNom comme sentinel
+    if (isNewMode) {
+      const exists = sessionGroup.requiredRoles.includes(metierNom);
+      return exists ? metierNom : null;
+    }
     for (const occ of sessionGroup.occurrences) {
       const slot = occ.ticketSlots.find(
         (s) =>
@@ -440,26 +449,59 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
   const requiredRoles = sessionGroup?.requiredRoles ?? [];
   const cartReady = cart.length > 0;
 
+  function handleCancel() {
+    // Mode "new" : rien en DB, retour à la liste des séances
+    if (!sessionGroup || isNewMode) {
+      router.push("/app");
+      return;
+    }
+    // Mode "existing" : séance déjà créée, retour sur sa page
+    router.push(`/app/sessions/${sessionGroup.id}`);
+  }
+
   function handleSend() {
     if (!sessionGroup || !cartReady) return;
     setSendError(null);
     startTransition(async () => {
-      if (slotsToSend.length === 0) {
+      // Mode "existing" sans nouveaux slots → redirect direct
+      if (!isNewMode && slotsToSend.length === 0) {
         router.push(`/app/sessions/${sessionGroup.id}`);
         return;
       }
 
-      const result = await sendCartRequests({
-        sessionGroupId: sessionGroup.id,
-        slots: slotsToSend.map((i) => ({
-          ticketSlotId: i.ticketSlotId,
-          providerId: i.providerId,
-          startAt: i.startAt,
-          endAt: i.endAt,
-        })),
-      });
+      const result = isNewMode && sessionGroup.newSessionParams
+        ? await sendCartRequests({
+            mode: "new",
+            newSessionParams: {
+              workshopId: sessionGroup.newSessionParams.workshopId,
+              workshopRoleGroupId: sessionGroup.newSessionParams.workshopRoleGroupId,
+              checkedSlotIds: sessionGroup.newSessionParams.checkedSlotIds,
+              nom: sessionGroup.newSessionParams.nom,
+              sessionNumber: sessionGroup.newSessionParams.sessionNumber,
+              seanceNumber: sessionGroup.newSessionParams.seanceNumber,
+              notes: sessionGroup.newSessionParams.notes,
+            },
+            slots: cart.map((i) => ({
+              ticketSlotId: i.ticketSlotId,
+              providerId: i.providerId,
+              startAt: i.startAt,
+              endAt: i.endAt,
+              providerRole: i.metierNom,
+            })),
+          })
+        : await sendCartRequests({
+            mode: "existing",
+            sessionGroupId: sessionGroup.id,
+            slots: slotsToSend.map((i) => ({
+              ticketSlotId: i.ticketSlotId,
+              providerId: i.providerId,
+              startAt: i.startAt,
+              endAt: i.endAt,
+            })),
+          });
+
       if (result.ok) {
-        router.push(`/app/sessions/${sessionGroup.id}`);
+        router.push(`/app/sessions/${result.sessionGroupId}`);
       } else {
         setSendError(result.error);
       }
@@ -581,27 +623,29 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
         {/* Grille calendrier — vue semaine */}
         {view === "week" && (
-        <div className="rounded-xl border border-border overflow-hidden" onClick={() => setPopup(null)}>
-          {/* En-tête jours — sticky */}
-          <div className="grid bg-background border-b" style={{ gridTemplateColumns: "3.5rem repeat(7, 1fr)" }}>
-            <div className="border-r bg-muted/20" />
+        <div className="rounded-xl border border-border shadow-sm overflow-hidden" onClick={() => setPopup(null)}>
+          {/* Scroll container — le sticky header vit à l'intérieur */}
+          <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 280px)", minHeight: 400 }}>
+          {/* En-tête jours sticky dans le scroll container */}
+          <div className="sticky top-0 z-30 grid bg-background/95 backdrop-blur-sm border-b shadow-sm" style={{ gridTemplateColumns: "3rem repeat(7, 1fr)" }}>
+            <div className="border-r border-border/40 bg-muted/30" />
             {days.map((day, i) => {
               const isToday = isSameDay(day, new Date());
               return (
                 <div
                   key={i}
-                  className={`py-3 text-center border-r last:border-r-0 select-none ${
-                    isToday ? "bg-primary/5" : ""
+                  className={`py-2.5 text-center border-r last:border-r-0 border-border/40 select-none ${
+                    isToday ? "bg-primary/[0.06]" : ""
                   }`}
                 >
-                  <div className={`text-[11px] font-medium uppercase tracking-widest mb-1 ${
-                    isToday ? "text-primary" : "text-muted-foreground"
+                  <div className={`text-[10px] font-semibold uppercase tracking-widest mb-1 ${
+                    isToday ? "text-primary" : "text-muted-foreground/60"
                   }`}>
                     {DOW[i]}
                   </div>
-                  <div className={`mx-auto w-8 h-8 flex items-center justify-center rounded-full text-sm font-semibold ${
+                  <div className={`mx-auto w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
                     isToday
-                      ? "bg-primary text-primary-foreground shadow-sm"
+                      ? "bg-primary text-primary-foreground shadow"
                       : "text-foreground"
                   }`}>
                     {day.getDate()}
@@ -611,38 +655,35 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
             })}
           </div>
 
-          {/* Corps grille scrollable */}
-          <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 280px)", minHeight: 400 }}>
-            <div className="relative" style={{ height: SLOTS.length * SLOT_H }}>
+          {/* Corps grille */}
+          <div className="relative" style={{ height: SLOTS.length * SLOT_H }}>
               {/* Lignes horaires */}
               {SLOTS.map((s) => (
                 <div
                   key={s}
                   className="absolute w-full flex items-start pointer-events-none"
-                  style={{ top: (s - gridTop) * SLOT_H }}
+                  style={{ top: (s - gridTop) * SLOT_H * 2 }}
                 >
-                  {/* Label heure */}
-                  <div className="w-14 shrink-0 pr-3 text-right">
+                  <div className="w-12 shrink-0 pr-2 text-right">
                     {s % 1 === 0 && (
-                      <span className="text-[10px] font-medium text-muted-foreground/70 -translate-y-2 inline-block">
+                      <span className="text-[10px] font-medium text-muted-foreground/50 -translate-y-2 inline-block">
                         {Math.floor(s)}h
                       </span>
                     )}
                   </div>
-                  {/* Ligne */}
                   <div
                     className="flex-1"
                     style={{
                       borderTop: s % 1 === 0
-                        ? "1px solid hsl(var(--border) / 0.5)"
-                        : "1px dashed hsl(var(--border) / 0.25)",
+                        ? "1px solid hsl(var(--border) / 0.6)"
+                        : "1px dashed hsl(var(--border) / 0.2)",
                     }}
                   />
                 </div>
               ))}
 
               {/* Colonnes jours */}
-              <div className="absolute inset-0 grid" style={{ gridTemplateColumns: "3.5rem repeat(7, 1fr)" }}>
+              <div className="absolute inset-0 grid" style={{ gridTemplateColumns: "3rem repeat(7, 1fr)" }}>
                 <div className="border-r border-border/30 bg-muted/10" />
                 {days.map((day, dayIdx) => {
                   const dayISO = day.toDateString();
@@ -656,67 +697,69 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                     <div
                       key={dayIdx}
                       className={`relative border-r last:border-r-0 border-border/30 ${
-                        isToday ? "bg-primary/[0.02]" : ""
+                        isToday ? "bg-primary/[0.025]" : ""
                       }`}
                     >
-                      {/* Cellules cliquables par demi-heure */}
-                      {hasCart && SLOTS.map((s) => (
+                      {/* Cellules cliquables par demi-heure — z-10, s'arrête avant slot sentinelle 21h */}
+                      {hasCart && SLOTS_CLICKABLE.map((s) => (
                         <div
                           key={s}
-                          className="absolute left-0 right-0 hover:bg-primary/8 cursor-pointer transition-colors rounded-sm"
-                          style={{ top: (s - gridTop) * SLOT_H, height: SLOT_H }}
+                          className="absolute left-0 right-0 hover:bg-primary/10 cursor-pointer transition-colors z-10"
+                          style={{ top: (s - gridTop) * SLOT_H * 2, height: SLOT_H }}
                           onClick={(e) => handleCellClick(day, s, e)}
                         />
                       ))}
 
                       {/* Blocs disponibilités en sous-colonnes */}
                       {dayBlocks.map((b) => {
-                        const top = (decimalHour(b.startAt) - gridTop) * SLOT_H;
-                        const height = Math.max((decimalHour(b.endAt) - decimalHour(b.startAt)) * SLOT_H, 24);
+                        const top = (decimalHour(b.startAt) - gridTop) * SLOT_H * 2;
+                        const height = Math.max((decimalHour(b.endAt) - decimalHour(b.startAt)) * SLOT_H * 2, 24);
                         const leftPct = (b.columnIndex / b.columnCount) * 100;
                         const widthPct = (1 / b.columnCount) * 100;
+                        // fond plus visible : alpha 25% au lieu de 9%
+                        const bgColor = b.isPending ? "transparent" : b.color + "28";
                         return (
                           <div
                             key={b.id}
-                            className="absolute overflow-hidden"
+                            className="absolute overflow-hidden z-20"
                             style={{
                               top: top + 1,
                               height: height - 2,
                               left: `calc(${leftPct}% + 2px)`,
                               width: `calc(${widthPct}% - 4px)`,
-                              borderRadius: 6,
-                              backgroundColor: b.isPending
-                                ? "transparent"
-                                : b.color + "18",
+                              borderRadius: 5,
+                              backgroundColor: bgColor,
                               borderLeft: `3px solid ${b.isPending ? "#94a3b8" : b.color}`,
                               backgroundImage: b.isPending
-                                ? "repeating-linear-gradient(45deg, #94a3b81a 0px, #94a3b81a 4px, transparent 4px, transparent 9px)"
+                                ? "repeating-linear-gradient(45deg, #94a3b822 0px, #94a3b822 4px, transparent 4px, transparent 9px)"
                                 : undefined,
-                              opacity: b.isPending ? 0.65 : 1,
+                              opacity: b.isPending ? 0.7 : 1,
+                              cursor: hasCart ? "pointer" : "default",
                             }}
                             onMouseEnter={() => setHoveredSlot(b)}
                             onMouseLeave={() => setHoveredSlot(null)}
                             onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                            onClick={hasCart ? (e) => handleCellClick(day, decimalHour(b.startAt), e) : undefined}
                           >
-                            <div className="px-1.5 py-1 h-full flex flex-col justify-start gap-px">
+                            <div className="px-1.5 py-1 h-full flex flex-col justify-start gap-px overflow-hidden">
                               <span
-                                className="text-[10px] font-semibold leading-tight truncate"
+                                className="text-[10px] font-bold leading-tight truncate"
                                 style={{ color: b.isPending ? "#94a3b8" : b.color }}
                               >
                                 {b.providerNom}
                               </span>
-                              {height >= 44 && (
-                                <span className="text-[9px] leading-tight opacity-75" style={{ color: b.isPending ? "#94a3b8" : b.color }}>
+                              {height >= 40 && (
+                                <span className="text-[9px] leading-tight tabular-nums" style={{ color: b.isPending ? "#94a3b8" : b.color, opacity: 0.8 }}>
                                   {fmtTime(b.startAt)}–{fmtTime(b.endAt)}
                                 </span>
                               )}
-                              {b.ville && height >= 60 && !b.isPending && (
-                                <span className="text-[9px] opacity-55 truncate" style={{ color: b.color }}>
+                              {b.ville && height >= 56 && !b.isPending && (
+                                <span className="text-[9px] truncate" style={{ color: b.color, opacity: 0.6 }}>
                                   {b.ville}
                                 </span>
                               )}
-                              {b.isPending && height >= 44 && (
-                                <span className="text-[9px] text-slate-400">Réservé</span>
+                              {b.isPending && height >= 40 && (
+                                <span className="text-[9px] text-slate-400 font-medium">Réservé</span>
                               )}
                             </div>
                           </div>
@@ -726,11 +769,10 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                       {/* Badge +N si overflow */}
                       {hasOverflow && (
                         <div
-                          className="absolute top-2 flex items-center justify-center rounded-md text-[10px] font-semibold bg-muted border border-border text-muted-foreground cursor-pointer hover:bg-accent transition-colors"
+                          className="absolute top-1 bottom-1 flex items-center justify-center rounded text-[10px] font-bold bg-muted/80 border border-border/50 text-muted-foreground cursor-pointer hover:bg-accent transition-colors z-20"
                           style={{
                             left: `calc(${((MAX_COLS - 1) / MAX_COLS) * 100}% + 2px)`,
                             width: `calc(${(1 / MAX_COLS) * 100}% - 4px)`,
-                            height: SLOTS.length * SLOT_H - 16,
                           }}
                           title={`+${overflowCount} prestataire${overflowCount > 1 ? "s" : ""} — filtrez par métier pour voir`}
                           onClick={(e) => {
@@ -753,10 +795,10 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
         {/* Grille calendrier — vue mois */}
         {view === "month" && (
-          <div className="rounded-lg border overflow-hidden">
-            <div className="grid border-b bg-muted/30" style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
+          <div className="rounded-xl border border-border overflow-hidden shadow-sm">
+            <div className="grid border-b bg-muted/20" style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
               {DOW.map((d) => (
-                <div key={d} className="py-2 text-center text-xs font-medium text-muted-foreground border-r last:border-r-0 uppercase tracking-wide">
+                <div key={d} className="py-2.5 text-center text-[10px] font-semibold text-muted-foreground/70 border-r last:border-r-0 border-border/40 uppercase tracking-widest">
                   {d}
                 </div>
               ))}
@@ -771,17 +813,25 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                     key={i}
                     type="button"
                     onClick={() => { setWeekStart(startOfWeek(day)); setView("week"); }}
-                    className={`min-h-20 border-r border-b last:border-r-0 p-1.5 text-left hover:bg-accent transition-colors ${inMonth ? "" : "bg-muted/20"}`}
+                    className={`min-h-24 border-r border-b last:border-r-0 border-border/30 p-2 text-left hover:bg-accent/60 transition-colors group ${
+                      inMonth ? "" : "bg-muted/30"
+                    } ${isToday ? "bg-primary/[0.04]" : ""}`}
                   >
-                    <span className={`text-xs ${isToday ? "w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold" : inMonth ? "text-foreground" : "text-muted-foreground"}`}>
+                    <span className={`text-xs inline-flex items-center justify-center w-6 h-6 rounded-full font-medium transition-colors ${
+                      isToday
+                        ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                        : inMonth
+                          ? "text-foreground group-hover:bg-accent"
+                          : "text-muted-foreground/40"
+                    }`}>
                       {day.getDate()}
                     </span>
                     {dayMetiers.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1.5">
+                      <div className="flex flex-wrap gap-1 mt-2">
                         {dayMetiers.map((m) => (
                           <span
                             key={m}
-                            className="w-2 h-2 rounded-full shrink-0"
+                            className="h-2 w-2 rounded-full shrink-0 ring-1 ring-white/50"
                             style={{ backgroundColor: metierColor(m, allMetiers) }}
                             title={m}
                           />
@@ -944,6 +994,15 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
               {requiredRoles.length - cart.length} métier{requiredRoles.length - cart.length > 1 ? "s" : ""} manquant{requiredRoles.length - cart.length > 1 ? "s" : ""}
             </p>
           )}
+
+          <Button
+            variant="ghost"
+            className="w-full text-muted-foreground hover:text-foreground"
+            disabled={isPending}
+            onClick={handleCancel}
+          >
+            Annuler
+          </Button>
         </div>
       )}
 
@@ -1035,9 +1094,8 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
         <div
           className="fixed z-40 rounded-lg border bg-background shadow-lg px-4 py-3 text-sm space-y-1 pointer-events-none"
           style={{
-            left: mousePos.x + 14,
-            top: mousePos.y - 10,
-            transform: mousePos.x > (typeof window !== "undefined" ? window.innerWidth - 220 : 900) ? "translateX(-110%)" : undefined,
+            left: mousePos.x > (typeof window !== "undefined" ? window.innerWidth - 220 : 900) ? mousePos.x - 210 : mousePos.x + 14,
+            top: Math.max(8, Math.min(mousePos.y - 10, (typeof window !== "undefined" ? window.innerHeight - 180 : 600))),
           }}
         >
           <div className="flex items-center gap-2">

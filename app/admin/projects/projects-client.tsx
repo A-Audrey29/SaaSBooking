@@ -31,10 +31,14 @@ import {
 import { ProjectForm } from "./project-form";
 import { softDeleteProject } from "./projects.actions";
 
+interface ProjectCentre {
+  id: string;
+  nom: string;
+}
+
 interface Project {
   id: string;
-  centreId: string;
-  centreNom: string;
+  centres: ProjectCentre[];
   nom: string;
   description: string | null;
   financeur: string | null;
@@ -102,7 +106,7 @@ export function ProjectsClient({ projects, centres }: ProjectsClientProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nom</TableHead>
-              <TableHead>Centre</TableHead>
+              <TableHead>Centres</TableHead>
               <TableHead>Financeur</TableHead>
               <TableHead>Période</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -127,7 +131,17 @@ export function ProjectsClient({ projects, centres }: ProjectsClientProps) {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{project.centreNom}</Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {project.centres.length === 0 ? (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      ) : (
+                        project.centres.map((c) => (
+                          <Badge key={c.id} variant="outline">
+                            {c.nom}
+                          </Badge>
+                        ))
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{project.financeur ?? "—"}</TableCell>
                   <TableCell>

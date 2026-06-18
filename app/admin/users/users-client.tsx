@@ -285,7 +285,7 @@ export function UsersClient({ users, centres }: UsersClientProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer cet utilisateur ?</AlertDialogTitle>
             <AlertDialogDescription>
-              L'utilisateur sera désactivé. Cette action est réversible par un administrateur.
+              L&apos;utilisateur sera désactivé. Cette action est réversible par un administrateur.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

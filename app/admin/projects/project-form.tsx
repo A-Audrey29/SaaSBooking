@@ -1,11 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -15,13 +16,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   CreateProjectSchema,
   UpdateProjectSchema,
   type CreateProjectInput,
@@ -29,9 +23,14 @@ import {
 } from "@/server/validations/project";
 import { createProject, updateProject } from "./projects.actions";
 
+interface ProjectCentre {
+  id: string;
+  nom: string;
+}
+
 interface ProjectRow {
   id: string;
-  centreId: string;
+  centres: ProjectCentre[];
   nom: string;
   description: string | null;
   financeur: string | null;
@@ -68,7 +67,7 @@ function CreateProjectForm({ centres, onSuccess, onCancel }: SharedProps) {
   const form = useForm<CreateProjectInput>({
     resolver: zodResolver(CreateProjectSchema) as Resolver<CreateProjectInput>,
     defaultValues: {
-      centreId: "",
+      centreIds: [],
       nom: "",
       description: "",
       financeur: "",
@@ -93,24 +92,34 @@ function CreateProjectForm({ centres, onSuccess, onCancel }: SharedProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
-          name="centreId"
-          render={({ field }) => (
+          name="centreIds"
+          render={() => (
             <FormItem>
-              <FormLabel>Centre</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un centre" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {centres.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormLabel>Centres participants</FormLabel>
+              <div className="space-y-2 mt-1">
+                {centres.map((centre) => (
+                  <Controller
+                    key={centre.id}
+                    control={form.control}
+                    name="centreIds"
+                    render={({ field }) => (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={field.value.includes(centre.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              field.onChange([...field.value, centre.id]);
+                            } else {
+                              field.onChange(field.value.filter((id) => id !== centre.id));
+                            }
+                          }}
+                        />
+                        <span className="text-sm">{centre.nom}</span>
+                      </label>
+                    )}
+                  />
+                ))}
+              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -122,7 +131,7 @@ function CreateProjectForm({ centres, onSuccess, onCancel }: SharedProps) {
             <FormItem>
               <FormLabel>Nom du projet</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="ex. Ateliers Parentalité 2025" />
+                <Input {...field} placeholder="ex. PasserelleCAP 2025" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -236,14 +245,28 @@ function EditProjectForm({ project, centres, onSuccess, onCancel }: EditProps) {
     });
   };
 
-  const centreName = centres.find((c) => c.id === project.centreId)?.nom ?? "—";
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1">
-          <p className="text-sm font-medium">Centre</p>
-          <p className="text-sm text-muted-foreground">{centreName}</p>
+          <p className="text-sm font-medium">Centres participants</p>
+          <div className="flex flex-wrap gap-1">
+            {project.centres.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun centre associé</p>
+            ) : (
+              project.centres.map((c) => (
+                <span
+                  key={c.id}
+                  className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                >
+                  {c.nom}
+                </span>
+              ))
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Pour modifier les centres, contacter un super-admin.
+          </p>
         </div>
         <FormField
           control={form.control}

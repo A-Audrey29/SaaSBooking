@@ -126,7 +126,7 @@ export function WorkshopsClient({ workshopTypes, centres, metiers }: WorkshopsCl
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 max-w-[1100px] mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-h-2xl font-semibold tracking-tight">Types d'ateliers</h1>
+        <h1 className="text-h-2xl font-semibold tracking-tight">Types d&apos;ateliers</h1>
         <Button onClick={() => setQuickCreateOpen(true)}>
           + Nouvel atelier
         </Button>
@@ -134,7 +134,7 @@ export function WorkshopsClient({ workshopTypes, centres, metiers }: WorkshopsCl
 
       <div className="space-y-3">
         {workshopTypes.length === 0 && (
-          <p className="text-sm text-muted-foreground">Aucun type d'atelier.</p>
+          <p className="text-sm text-muted-foreground">Aucun type d&apos;atelier.</p>
         )}
 
         {workshopTypes.map((wt) => (
