@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SaaS Booking",
+  title: "ResaPresta",
   description: "Gestion de séances d'ateliers pour centres sociaux",
 };
 
