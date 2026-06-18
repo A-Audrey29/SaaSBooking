@@ -5,76 +5,87 @@
 ```
 /app                          → Routes Next.js, UI uniquement, JAMAIS SQL
   /(admin)                    → Espace super_admin + project_admin
+    /centers, /projects, /metiers, /providers, /users, /workshops, /export
   /(app)                      → Espace référent
+    /sessions, /availability, /calendar, /providers
   /(pro)                      → Espace prestataire
+    /missions, /dispos, /profile
+  /login, /dev-login (⚠️ désactiver prod), /account, /setup-password
   /api/auth/[...all]          → Better Auth handler
 /server                       → Toute logique métier
   /db
-    /schema                   → Schémas Drizzle par domaine
+    /schema                   → Schémas Drizzle par domaine (20 tables)
     /client.ts                → Client Drizzle + Neon
     /migrations               → SQL généré drizzle-kit
   /auth/config.ts             → Config Better Auth
-  /context/server-context.ts  → ServerContext {user_id, centre_id, role}
-  /services                   → Logique métier (usage progressif)
-  /repositories               → Accès DB + filtre centre_id
+  /context/server-context.ts  → ServerContext {userId, centreId, role}
+  /queries                    → Lecture DB
+  /mutations                  → Écriture DB
+  /validations                → Schémas Zod par domaine
   /lib                        → email, errors, utils
-/scripts
-  /migrate.ts                 → Application migrations (séparé build)
-  /seed.ts                    → Seed dev
+/scripts                      → Scripts tsx one-off (non commités)
 ```
 
 ---
 
 ## Rôles (4 fixes)
 
-| Rôle | Périmètre | Bypass centre_id |
-|------|-----------|------------------|
-| super_admin | Tout | Oui |
-| project_admin | 1 centre | Non |
-| referent | 1 centre | Non |
-| provider | Multi-centres | Non |
+| Rôle | Périmètre | Bypass centre_id | Espace |
+|------|-----------|------------------|--------|
+| super_admin | Tout | Oui | /admin |
+| project_admin | 1 centre | Non | /admin |
+| referent | 1 centre | Non | /app |
+| provider | Global (pas de centre) | Non | /pro |
 
 ---
 
 ## Multi-tenant (isolation applicative)
 
-**Principe:** Champ `centre_id` sur TOUTES tables métier
+**Principe :** `centre_id` sur toutes les tables métier sauf `provider`, `metier`, `audit_log` (nullable).
 
-**Implémentation:**
-- Fonction `applyCenterScope(ctx, query)` gère bypass super_admin
-- `ServerContext` centralisé, JAMAIS `centre_id` du client
-- Index sur `centre_id` partout (perfs critiques)
-- **Pas RLS Postgres V1** (V2 si besoin)
+**Implémentation :**
+- `applyCenterScope(ctx, query)` gère bypass super_admin
+- `ServerContext` centralisé — JAMAIS `centre_id` du client
+- Pas de RLS Postgres V1 (V2 si besoin)
+
+**Provider :** pas de `centre_id` — global en V1 (BDR-017, territoire Guadeloupe)
 
 ---
 
 ## Modèle données (hiérarchie)
 
 ```
-Centre → Project → Workshop → Session → Occurrence → Ticket → TicketSlot
+Centre → Project → Workshop → SessionGroup → Occurrence → Ticket → TicketSlot
+                   Workshop.centreId nullable (catalogue global admin, BDR-022)
+                                                Occurrence.startAt/endAt nullable (dates fixées après création)
 ```
 
-### Tables principales
+### Tables schema (20)
 
-**Auth (Better Auth):**
-- user (étendu: centre_id, role)
-- session
-- account
-- verification
+**Auth (Better Auth) :** user (étendu), session, account, verification
 
-**Core métier:**
-- centre (tenant)
-- project
-- workshop_type (référentiel 11 types fixes)
-- workshop
-- provider_role (pivot rôles/workshop_type)
-- provider
-- provider_assignment (junction provider/project, soft-delete)
-- session_group
-- occurrence
-- ticket
-- ticket_slot
-- audit_log (vide V1, écritures V1.5)
+**Référentiels :** centre, metier, workshop_type, workshop_role_group, workshop_role_slot
+
+**Instances :** project, workshop, session_group, occurrence, ticket, ticket_slot
+
+**Prestataires :** provider, provider_assignment, provider_availability
+
+**Transverses :** audit_log, user_invitation
+
+---
+
+## Points clés V1 vs spec initiale
+
+| Sujet | État V1 |
+|-------|---------|
+| `workshop.centreId` | NULLABLE — catalogue global admin (BDR-022) |
+| `occurrence.startAt/endAt` | NULLABLE — fixées lors sélection dispo (BDR-015) |
+| Couleur slot | Sur `metier.color`, pas sur `workshop_role_slot` |
+| `provider.userId` | UNIQUE FK → user (BDR-010) |
+| `provider_availability.kind` | `available \| unavailable` (exceptions horaires) |
+| Granularité dispo | 30 minutes |
+| `provider_role` table | SUPPRIMÉE — remplacée par `workshop_role_slot` + `metier` |
+| `getProvidersForSlot` | Filtre metier_id + availability, pas provider_assignment (BDR-009) |
 
 ---
 
@@ -86,25 +97,24 @@ Centre → Project → Workshop → Session → Occurrence → Ticket → Ticket
 | Timestamps | TIMESTAMPTZ, stockés UTC, affichés timezone centre |
 | Timezone défaut | America/Guadeloupe |
 | Soft delete | `deleted_at` nullable timestamptz sur toutes tables métier |
-| Cascade delete | Non (protection données) |
+| Cascade delete | Non (protection données), sauf auth (Better Auth) et occurrence→ticket |
 
 ---
 
 ## Auth
 
-**V1:** Magic link uniquement (Resend)
+**V1 :** Magic link uniquement (Resend)
 
-**Flow:**
+**Flow :**
 1. User entre email sur `/login`
 2. Better Auth envoie magic link
 3. Click link → session créée DB
-4. Hook signIn: refuser si `user.deleted_at IS NOT NULL`
-5. Dispatch selon rôle:
-   - super_admin / project_admin → `/admin`
-   - referent → `/app`
-   - provider → `/pro`
+4. Hook signIn : refuser si `user.deleted_at IS NOT NULL`
+5. Dispatch selon rôle : super_admin/project_admin → `/admin`, referent → `/app`, provider → `/pro`
 
-**Password:** Temporaire dev local uniquement. À désactiver avant V1 prod.
+**Invitation :** admin crée compte via `user_invitation` (token unique, expiration)
+
+**Password :** vestige dev local uniquement (`password_set`). Désactiver avant prod (BLK-011 : `/dev-login` route encore présente).
 
 ---
 
@@ -115,8 +125,8 @@ Centre → Project → Workshop → Session → Occurrence → Ticket → Ticket
 | Générer SQL | `drizzle-kit generate` | Local |
 | Commit SQL | git | Repo |
 | Appliquer dev | `npm run db:migrate` | Local → Neon dev branch |
-| Appliquer prod | `npm run db:migrate` | Local → Neon prod OU Render Job |
+| Appliquer prod | `npm run db:migrate` | Terminal local → Neon prod |
 
-**Build Render:** `npm ci && npm run build` UNIQUEMENT. Jamais migration dans build.
+**Build Render :** `npm ci && npm run build` UNIQUEMENT. Jamais migration dans build.
 
-**Migration prod:** Terminal local pointé sur DB prod, ou Render Job dédié.
+**DETTE-DB-001 :** migration id=9 créée hors drizzle-kit, pas de fichier SQL local — à résoudre avant prod.

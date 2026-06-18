@@ -1,122 +1,230 @@
 # Asanblé — Spécification V1
 
 > Source unique de vérité fonctionnelle et technique pour la V1.
-> Toute divergence entre ce document, le schéma DB et le code = bug.
-> Mise à jour : chaque décision validée doit être reflétée ici dans la même PR.
+> **Basée sur le code réel** — dernière mise à jour 2026-06-17.
+> En cas de divergence entre ce document et le code : le code a raison.
 
 ---
 
-## 1. Modèle de données cible (post-migration)
+## 1. Modèle de données
 
-Schéma final après migration D1/D2/D4bis appliquée. Tables existantes
-maintenues sauf mention contraire.
+20 tables au total. Structure complète basée sur `/server/db/schema/`.
 
-### 1.1 Tables référentiels (multi-tenant)
+### 1.1 Tables auth (gérées par Better Auth)
 
-#### `centre` — entité tenant racine
+| Table | Rôle |
+|---|---|
+| `user` | Étendu : `centre_id`, `role`, `password_set`, `deleted_at` |
+| `session` | Sessions auth actives |
+| `account` | Comptes OAuth (non utilisé V1) |
+| `verification` | Tokens magic link |
+
+#### `user` — colonnes métier ajoutées
+| Colonne | Type | Notes |
+|---|---|---|
+| `centre_id` | uuid FK → centre, nullable | `NULL` = super_admin (bypass centre) |
+| `role` | text CHECK | `super_admin \| project_admin \| referent \| provider` |
+| `password_set` | boolean default false | Temporaire dev local |
+| `deleted_at` | timestamptz nullable | Soft delete — bloque connexion |
+
+Index unique `email` partiel sur `deleted_at IS NULL` (permet réutilisation email après soft delete).
+
+---
+
+### 1.2 Tables référentiels
+
+#### `centre` — tenant racine
 | Colonne | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
-| `nom`, `adresse`, `ville`, `timezone`, `telephone`, `email` | text | |
+| `nom`, `adresse`, `ville`, `timezone`, `telephone`, `email` | text | `timezone` default `America/Guadeloupe` |
 | `created_at`, `updated_at`, `deleted_at` | timestamptz | UTC |
+
+#### `metier` — référentiel des métiers prestataires
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `nom` | text NOT NULL | ex. "Psychologue", "Coach sportif" |
+| `color` | text nullable | hex couleur pour affichage badges |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | UTC |
+
+Table globale (pas de `centre_id`). Source de vérité pour le matching métier prestataire ↔ slot.
 
 #### `workshop_type` — template d'atelier
 | Colonne | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
-| `centre_id` | uuid FK → centre, **NULLABLE** | `NULL` = template global Asanblé, valeur = template propre au centre |
-| `code` | text | code interne (ex. `PARENTALITE`) |
+| `centre_id` | uuid FK → centre, **NULLABLE** | `NULL` = template global admin, valeur = propre au centre |
+| `code` | text UNIQUE | ex. `PARENTALITE`, `SPORT_SANTE` |
 | `nom`, `description` | text | |
-| `created_at`, `updated_at`, `deleted_at` | timestamptz | `deleted_at` à ajouter |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
 
-**Changement migration** : ajout `centre_id NULL` + `deleted_at`.
+En V1, `createWorkshop` insère `centreId = NULL` (catalogue global). Les centres voient le catalogue global.
 
-#### `workshop_role_group` — groupe de besoins (NOUVELLE TABLE)
+#### `workshop_role_group` — groupe de besoins (logique OU entre groupes)
 | Colonne | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
 | `workshop_type_id` | uuid FK → workshop_type, cascade | |
-| `label` | text | ex. "Configuration standard", "Configuration sport" |
-| `ordre` | integer | tri d'affichage |
+| `label` | text | ex. "Configuration standard" |
+| `ordre` | integer default 0 | tri d'affichage |
 | `created_at`, `updated_at`, `deleted_at` | timestamptz | |
 
-Sémantique : un `workshop_type` peut avoir N `workshop_role_group`. Le "OU" est
-exprimé entre groupes (le référent choisit UN groupe à la création de
-l'occurrence). Le "ET" est exprimé entre les slots d'un même groupe.
+Un `workshop_type` a N groupes. Logique OU entre groupes : le référent choisit UN groupe à la création de l'occurrence.
 
-#### `workshop_role_slot` — un besoin dans un groupe (NOUVELLE TABLE)
+#### `workshop_role_slot` — un besoin individuel (logique ET dans un groupe)
 | Colonne | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
 | `workshop_role_group_id` | uuid FK → workshop_role_group, cascade | |
-| `role` | text | une seule valeur (pas de OU dans un slot) |
-| `couleur` | text | hex, héritée de l'ancien provider_role |
-| `is_optional` | boolean default false | true = pré-décoché côté UI référent |
-| `ordre` | integer | |
+| `metier_id` | uuid FK → metier, RESTRICT | matching via `metier.id` |
+| `is_optional` | boolean default false | `true` = pré-décoché UI référent |
+| `ordre` | integer default 0 | |
 | `created_at`, `updated_at`, `deleted_at` | timestamptz | |
 
-**Règle 1 slot = 1 personne** : pas de colonne `quantite`. Si l'admin veut
-2 animateurs, il crée 2 slots dans le groupe.
+**Règle 1 slot = 1 personne.** Pour 2 animateurs, créer 2 slots.
+Couleur du slot affichée via `metier.color` (pas de colonne `couleur` sur slot).
 
-#### `provider_role` — **À SUPPRIMER**
-Remplacée par `workshop_role_group` + `workshop_role_slot`. Le seed actuel
-(5 lignes) sera migré dans la nouvelle structure : 1 groupe par
-`workshop_type` existant, 1 slot par ligne actuelle.
+---
 
-### 1.2 Tables projets et instances
+### 1.3 Tables projets et instances
 
 #### `project`
-Inchangé. `centre_id NOT NULL`.
-
-#### `workshop`
-Inchangé. Lié à `project` (qui porte `centre_id`).
-
-#### `session_group`
-Inchangé. `centre_id NOT NULL`. Représente un groupe d'occurrences pour un
-public donné (ex. "Groupe Parents — Session 1").
-
-#### `occurrence`
 | Colonne | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
-| `session_group_id` | uuid FK → session_group, cascade | |
-| `index` | integer | n° de séance dans le groupe (1..N) |
-| `start_at`, `end_at` | timestamptz | UTC |
-| `lieu`, `salle`, `notes` | text | |
-| `statut` | text CHECK | voir §5 |
-| `workshop_role_group_id` | uuid FK, **NULLABLE** | groupe choisi à la création (NOUVELLE COLONNE) |
+| `centre_id` | uuid FK → centre, RESTRICT NOT NULL | |
+| `nom`, `description`, `financeur` | text | |
+| `start_date`, `end_date` | date nullable | |
 | `created_at`, `updated_at`, `deleted_at` | timestamptz | |
 
-**Changement migration** : ajout `workshop_role_group_id` pour tracer quel
-groupe a été choisi lors de la création.
-
-#### `ticket`
-Inchangé. 1 ticket = 1 occurrence = N slots.
-
-#### `ticket_slot`
+#### `workshop` — atelier concret
 | Colonne | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
-| `ticket_id` | uuid FK → ticket, cascade | |
-| `provider_role` | text NOT NULL | **valeur copiée** depuis `workshop_role_slot.role` à la création (text libre, pas FK) |
-| `workshop_role_slot_id` | uuid FK, **NULLABLE** | traçabilité vers le template (NOUVELLE COLONNE, pas de cascade DELETE) |
-| `provider_id` | uuid FK → provider, set null | |
-| `statut` | text CHECK | voir §5 |
-| `sent_at`, `responded_at` | timestamptz | |
+| `project_id` | uuid FK → project, RESTRICT NOT NULL | |
+| `centre_id` | uuid FK → centre, **NULLABLE**, SET NULL | `NULL` = catalogue global admin (BDR-022) |
+| `type_id` | uuid FK → workshop_type, RESTRICT nullable | |
+| `nom`, `description` | text | |
+| `seances_count` | integer default 1 | nb de séances prévues |
+| `duration_min` | integer default 90 | durée en minutes |
 | `created_at`, `updated_at`, `deleted_at` | timestamptz | |
 
-**Changement migration** : ajout `workshop_role_slot_id` nullable pour
-traçabilité, sans FK stricte (pas de cascade).
+#### `session_group` — groupe d'occurrences pour un public
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `workshop_id` | uuid FK → workshop, RESTRICT NOT NULL | |
+| `centre_id` | uuid FK → centre, RESTRICT NOT NULL | |
+| `nom` | text NOT NULL | ex. "Groupe Parents" |
+| `audience` | text nullable | description du public, ex. "8 ados 13–16 ans" |
+| `notes` | text nullable | |
+| `session_number` | integer nullable | numéro de session |
+| `seance_number` | integer nullable | numéro de séance dans la session |
+| `created_by` | uuid FK → user, SET NULL nullable | traçabilité créateur |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
 
-### 1.3 Tables auth et provider
+#### `occurrence` — une séance
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `session_group_id` | uuid FK → session_group, cascade NOT NULL | |
+| `index` | integer NOT NULL | n° de séance dans le groupe (1..N) |
+| `start_at`, `end_at` | timestamptz **NULLABLE** | dates fixées lors de la sélection de dispo, pas à la création |
+| `lieu`, `salle`, `notes` | text nullable | |
+| `statut` | text CHECK NOT NULL | `planned \| confirmed \| completed \| cancelled` |
+| `workshop_role_group_id` | uuid FK → workshop_role_group, SET NULL nullable | groupe choisi à la création |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
 
-`user`, `session`, `account`, `verification` — inchangées (Better Auth).
-`provider`, `provider_assignment` — inchangées.
+**Point clé :** `start_at/end_at` sont nullable en V1. Les dates sont renseignées après création, via le calendrier de disponibilité.
 
-### 1.4 Audit
+#### `ticket` — demande agrégée pour une occurrence
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `occurrence_id` | uuid FK → occurrence, cascade NOT NULL | |
+| `statut` | text CHECK NOT NULL | mêmes valeurs que ticket_slot |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
+
+#### `ticket_slot` — un slot de demande individuel (1 rôle à pourvoir)
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `ticket_id` | uuid FK → ticket, cascade NOT NULL | |
+| `provider_role` | text NOT NULL | valeur copiée depuis `metier.nom` à la création |
+| `workshop_role_slot_id` | uuid nullable, **pas de FK stricte** | traçabilité vers le template |
+| `provider_id` | uuid FK → provider, SET NULL nullable | prestataire assigné |
+| `statut` | text CHECK NOT NULL | voir §5.1 |
+| `sent_at` | timestamptz nullable | quand la demande a été envoyée |
+| `responded_at` | timestamptz nullable | quand le prestataire a répondu |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
+
+---
+
+### 1.4 Tables prestataires
+
+#### `provider`
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `user_id` | uuid UNIQUE FK → user, SET NULL nullable | lien compte auth (BDR-010) |
+| `nom`, `email` | text NOT NULL | |
+| `telephone`, `ville`, `bio` | text nullable | |
+| `metier_id` | uuid FK → metier, RESTRICT nullable | métier principal |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
+
+Pas de scoping `centre_id` sur `provider` en V1 — les prestataires sont globaux (BDR-017, Guadeloupe couvre le territoire entier).
+
+#### `provider_assignment` — lien prestataire/projet
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `provider_id` | uuid FK → provider, RESTRICT NOT NULL | |
+| `project_id` | uuid FK → project, RESTRICT NOT NULL | |
+| `metier_id` | uuid FK → metier, RESTRICT NOT NULL | |
+| `created_at`, `deleted_at` | timestamptz | soft delete |
+
+Contrainte UNIQUE sur `(provider_id, project_id, metier_id)`.
+**Note V1 :** `provider_assignment` n'est pas utilisé pour filtrer les prestataires dans `getProvidersForSlot` — le filtre passe par `metier_id` + `provider_availability` (BDR-009).
+
+#### `provider_availability` — créneaux de disponibilité
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `provider_id` | uuid FK → provider, CASCADE NOT NULL | |
+| `start_at` | timestamptz NOT NULL | UTC |
+| `end_at` | timestamptz NOT NULL | UTC |
+| `kind` | text CHECK NOT NULL default `available` | `available \| unavailable` |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | soft delete |
+
+`kind = 'unavailable'` = exception horaire qui efface les `available` chevauchants (sauf protégés par slot `confirmed`).
+Granularité : 30 minutes. Chevauchements non contraints en DB V1.
+
+---
+
+### 1.5 Tables transverses
 
 #### `audit_log`
-Inchangée structurellement. Câblée en V1 (voir §6).
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `centre_id` | uuid nullable | `NULL` pour actions super_admin |
+| `user_id` | uuid NOT NULL | qui a fait l'action |
+| `action` | text NOT NULL | `create \| update \| soft_delete` |
+| `entity_type` | text NOT NULL | nom de la table |
+| `entity_id` | uuid NOT NULL | id de l'entité |
+| `before`, `after` | jsonb nullable | snapshots avant/après |
+| `created_at` | timestamptz NOT NULL | |
+
+#### `user_invitation`
+| Colonne | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `user_id` | uuid FK → user, CASCADE NOT NULL | |
+| `token` | text UNIQUE NOT NULL | |
+| `expires_at` | timestamptz NOT NULL | |
+| `used_at` | timestamptz nullable | |
+| `created_at` | timestamptz NOT NULL | |
 
 ---
 
@@ -124,39 +232,14 @@ Inchangée structurellement. Câblée en V1 (voir §6).
 
 ### 2.1 Les 4 rôles
 
-| Rôle | Description | Multi-instance |
-|---|---|---|
-| `super_admin` | Équipe Asanblé. Voit tout, bypasse `centre_id`. | Plusieurs comptes possibles |
-| `project_admin` | Admin d'un centre (V1.5+). En V1 = admin Asanblé délégué par centre. | Plusieurs par centre |
-| `referent` | Personnel d'un centre social. Crée des sessions et trouve des prestataires. | Plusieurs par centre |
-| `provider` | Prestataire externe. Voit ses missions, accepte/refuse. | N/A |
-
-### 2.2 Règle multi-tenant (invariant absolu)
-
-**Toute requête SELECT/UPDATE/DELETE sur une entité avec `centre_id` (direct
-ou indirect) DOIT passer par `applyCenterScope(ctx, query)` ou équivalent
-typé.**
-
-Comportement :
-- `super_admin` : filtre `deleted_at IS NULL` uniquement.
-- Autres : filtre `centre_id = ctx.centreId AND deleted_at IS NULL`.
-
-### 2.3 Cas spécifique des référentiels nullables
-
-`workshop_type`, `workshop_role_group`, `workshop_role_slot` ont `centre_id`
-nullable (directement ou hérité). Règle d'affichage :
-
-| Rôle | Voit |
+| Rôle | Description |
 |---|---|
-| `super_admin` | TOUT (globaux + tous centres) |
-| `project_admin` | UNIQUEMENT `centre_id = ctx.centreId` (pas les globaux) |
-| `referent` | UNIQUEMENT `centre_id = ctx.centreId` (pas les globaux) |
-| `provider` | N/A (ne consomme pas ces tables) |
+| `super_admin` | Équipe Asanblé. Bypass `centre_id`. Accès `/admin/*`. |
+| `project_admin` | Admin délégué d'un centre. Accès `/admin/*`. |
+| `referent` | Personnel centre social. Crée sessions, trouve prestataires. Accès `/app/*`. |
+| `provider` | Prestataire externe. Voit missions, accepte/refuse. Accès `/pro/*`. |
 
-**Conséquence UX V1** : un centre nouvellement créé démarre avec un catalogue
-vide. Pas de "clone from global" en V1. À implémenter V1.5.
-
-### 2.4 Matrice d'accès par espace
+### 2.2 Matrice d'accès par espace
 
 | Espace | super_admin | project_admin | referent | provider |
 |---|---|---|---|---|
@@ -164,328 +247,206 @@ vide. Pas de "clone from global" en V1. À implémenter V1.5.
 | `/app/*` | ❌ | ❌ | ✅ | ❌ |
 | `/pro/*` | ❌ | ❌ | ❌ | ✅ |
 
-Implémentation : `requireRole()` en début de chaque route serveur.
+### 2.3 Règle multi-tenant (invariant absolu)
+
+Toute requête SELECT/UPDATE/DELETE sur entité avec `centre_id` (direct ou indirect) passe par `applyCenterScope(ctx, query)`.
+
+- `super_admin` : filtre `deleted_at IS NULL` uniquement.
+- Autres : filtre `centre_id = ctx.centreId AND deleted_at IS NULL`.
+
+`centreId` vient toujours de `ServerContext {userId, centreId, role}`. Jamais du client.
+
+### 2.4 Providers — pas de scoping centre en V1
+
+`provider` n'a pas de `centre_id`. Tous les prestataires sont visibles par tous les centres. Décision BDR-017 : Guadeloupe = territoire unique, scoping serait contre-productif.
 
 ---
 
-## 3. Logique ET/OU sur les besoins de rôles (Modèle A)
-
-### 3.1 Sémantique
+## 3. Logique ET/OU sur les besoins de rôles
 
 - Un `workshop_type` a N `workshop_role_group`.
-- Le **OU** s'exprime entre groupes : à la création d'une occurrence, le
-  référent choisit UN groupe.
-- Le **ET** s'exprime entre les slots d'un groupe : tous les slots requis du
-  groupe choisi seront pourvus.
-- Les slots `is_optional = true` sont pré-décochés. Le référent les coche
-  s'il veut.
+- **OU entre groupes** : à la création d'une occurrence, le référent choisit UN groupe.
+- **ET entre slots du groupe choisi** : tous les slots requis seront pourvus.
+- Slots `is_optional = true` = pré-décochés. Le référent coche s'il veut.
 
-### 3.2 Exemple métier
-
-`workshop_type` : "Atelier bien-être famille"
-- Groupe 1 "Configuration standard" :
-  - Slot Psychologue (requis)
-  - Slot Animateur (requis)
-  - Slot Coach sportif (optionnel)
-- Groupe 2 "Configuration sport" :
-  - Slot Coach sportif (requis)
-  - Slot Éducateur sportif (requis)
-
-À la création d'une occurrence, le référent choisit Groupe 1 OU Groupe 2.
-Si Groupe 1 : 2 tickets créés (Psy, Animateur). Le Coach optionnel est
-proposé en case à cocher, ticket créé seulement s'il coche.
-
-### 3.3 Path V1.5 → Modèle B (multi-rôles équivalents)
-
-Documenté pour mémoire, NON implémenté en V1 :
-Ajouter une table `workshop_role_slot_alternative(workshop_role_slot_id, role)`
-pour exprimer "ce slot peut être couvert par n'importe quel rôle de cette
-liste". Migration future, ne casse pas la structure actuelle.
+**QuickCreate (BDR-016) :** Un drawer crée `workshop_type` + `workshop_role_group` + `workshop_role_slot` en une transaction atomique (pas de flow 3 étapes séparé).
 
 ---
 
-## 4. Création d'une occurrence — flux complet
+## 4. Création d'une session — flux
 
-### 4.1 Préconditions
+### 4.1 Server action `createSessionGroup`
 
-- Le référent est connecté, `ctx.centreId` défini.
-- Au moins un `workshop_type` visible pour son centre.
-- Au moins un `workshop` créé sous un `project` du centre.
+Transaction atomique unique :
+1. Crée `session_group` (`centre_id = ctx.centreId`, `created_by = ctx.userId`)
+2. Crée 1 `occurrence` (`start_at/end_at = NULL`, `statut = planned`, `workshop_role_group_id` rempli)
+3. Crée 1 `ticket` pour l'occurrence
+4. Pour chaque slot **coché** : crée 1 `ticket_slot` (`statut = empty`, copie `metier.nom` dans `provider_role`, garde `workshop_role_slot_id` pour traçabilité)
+5. Pour chaque slot requis **décoché** : crée 1 `ticket_slot` (`statut = skipped`)
+6. Pas de slot créé pour les optionnels non cochés
 
-### 4.2 Étapes (server actions)
+### 4.2 Validation Zod (entrée)
 
-1. **Sélection du workshop** par le référent (UI).
-2. **Affichage des `workshop_role_group`** du `workshop_type` du workshop.
-3. **Sélection d'UN groupe** par le référent.
-4. **Affichage des slots du groupe** : requis pré-cochés (décochables),
-   optionnels pré-décochés (cochables).
-5. **Saisie** : nom du groupe (audience), notes, dates des N occurrences.
-6. **Submit** → server action `createSessionGroup` qui, en UNE transaction
-   atomique :
-   - Crée `session_group` (avec `centre_id = ctx.centreId`).
-   - Crée N `occurrence` (avec `workshop_role_group_id` rempli).
-   - Pour CHAQUE occurrence : crée 1 `ticket`.
-   - Pour CHAQUE ticket : crée 1 `ticket_slot` par slot **coché**
-     (requis non-décochés + optionnels cochés). Statut initial `empty`.
-     Copie `role` dans `ticket_slot.provider_role` (text) et garde
-     `workshop_role_slot_id` pour traçabilité.
-   - Pour CHAQUE slot **décoché parmi les requis** : créer 1 `ticket_slot`
-     statut `skipped`. **Pas** de slot créé pour les optionnels non cochés
-     (Façon 2).
-
-### 4.3 Invariants à coder
-
-- Toute la création est atomique (Drizzle transaction).
-- `occurrence.statut` initial = `planned`.
-- `ticket.statut` initial = `empty`.
-- L'audit_log enregistre la création du `session_group` (avant et après).
+```
+workshopId, workshopRoleGroupId : uuid
+checkedSlotIds : uuid[] (min 1)
+nom : string (1–200 chars)
+sessionNumber, seanceNumber : integer (1–999)
+notes : string optional (max 1000)
+```
 
 ---
 
-## 5. Machine à états
+## 5. Machines à états
 
 ### 5.1 `ticket_slot.statut`
 
-Valeurs autorisées (CHECK constraint existant) :
-`empty, pending, confirmed, refused, cancelled, done, skipped`
+Valeurs : `empty | pending | confirmed | refused | cancelled | done | skipped`
 
-> **⚠️ Distinction critique — `skipped` ≠ `cancelled`**
+> **Distinction critique — `skipped` ≠ `cancelled`**
 >
-> **`skipped`** = le référent a intentionnellement écarté ce besoin.
-> La séance a lieu normalement. Le slot n'est pas à pourvoir.
-> Exemple : "pas besoin de coach sportif pour cette séance-ci".
->
-> **`cancelled`** = l'occurrence entière est annulée.
-> La séance n'a pas lieu. Tous les slots tombent en cascade.
-> Exemple : "la séance du 14 mai est annulée".
->
-> Confondre les deux fausse les stats et le calcul de `occurrence.statut`.
+> `skipped` = référent écarte intentionnellement ce besoin. Séance a lieu. Slot non à pourvoir.
+> `cancelled` = occurrence annulée. Séance n'a pas lieu. Tous les slots tombent en cascade.
+> Confondre les deux fausse les stats et `occurrence.statut`.
 
 Transitions autorisées :
 
 | De | Vers | Acteur | Effet |
 |---|---|---|---|
-| `empty` | `pending` | referent | assignation à un provider (`provider_id` rempli, `sent_at` rempli) |
-| `pending` | `confirmed` | provider | acceptation (`responded_at` rempli) |
-| `pending` | `refused` | provider | refus (`responded_at` rempli) |
-| `pending` | `empty` | referent | **annulation demande** (provider_id repassé à NULL, sent_at conservé pour audit) |
-| `refused` | `pending` | referent | réassignation à un autre provider |
+| `empty` | `pending` | referent | `provider_id` rempli, `sent_at = now()` |
 | `empty` | `skipped` | referent | retrait du besoin |
-| `pending` | `skipped` | referent | retrait du besoin sur demande en cours |
+| `pending` | `empty` | referent | annulation demande (`provider_id` conservé, visible dans `/pro/missions` comme "annulé") |
+| `pending` | `skipped` | referent | retrait du besoin sur demande en cours (`provider_id` effacé) |
+| `pending` | `confirmed` | provider | acceptation (`responded_at = now()`) |
+| `pending` | `refused` | provider | refus (`responded_at = now()`) |
+| `refused` | `pending` | referent | réassignation à un autre prestataire |
 | `refused` | `skipped` | referent | abandon du slot |
-| `confirmed` | `cancelled` | referent | **annulation slot confirmé** (notification provider à câbler, raison obligatoire dans audit_log) |
-| `confirmed` | `done` | système | séance passée + slot confirmé (cron/batch ou trigger à la lecture) |
-| toutes actives | `cancelled` | système | cascade depuis `occurrence.statut = cancelled` |
+| `confirmed` | `cancelled` | système | cascade depuis annulation occurrence |
+| `confirmed` | `done` | système | à implémenter V1.5 (cron ou trigger lecture) |
+| toutes actives | `cancelled` | système | cascade `cancelOccurrence` — **non implémenté V1** |
 
-Transitions interdites (à coder dans la fonction de mutation, à tester) :
-- `confirmed → pending` (pas de retour en arrière silencieux)
-- `done → *` (terminal)
-- `cancelled → *` (terminal)
-- `skipped → *` (terminal en V1, réactivation modélisable V1.5)
+États terminaux : `done`, `cancelled`, `skipped` → aucune transition sortante.
 
 ### 5.2 `occurrence.statut`
 
-Valeurs autorisées (CHECK constraint existant) :
-`planned, confirmed, completed, cancelled`
+Valeurs : `planned | confirmed | completed | cancelled`
 
-> **⚠️ Précondition création occurrence** : le référent ne peut créer une
-> occurrence que si son centre possède au moins un `workshop_type` avec
-> `centre_id = ctx.centreId`. Un centre nouvellement créé démarre avec un
-> catalogue vide (pas de clone global en V1). Si le catalogue est vide,
-> bloquer la création et afficher un message explicite.
+Dérivé par `recomputeOccurrenceStatut(occurrenceId)`, appelé dans la même transaction que toute mutation `ticket_slot.statut`.
 
-**Statut dérivé** par fonction unique `recomputeOccurrenceStatut(occurrenceId)`,
-appelée systématiquement dans la même transaction que toute mutation de
-`ticket_slot.statut`.
+Règles (dans l'ordre) :
+1. Annulation explicite → `cancelled` (figé)
+2. Tous slots actifs (hors `skipped/cancelled`) sont `done` → `completed`
+3. Tous slots actifs sont `confirmed` ou `done` → `confirmed`
+4. Sinon → `planned`
 
-Règles de dérivation (dans cet ordre) :
-1. Si l'occurrence a été annulée explicitement → `cancelled` (statut figé).
-2. Tous les slots actifs (hors `skipped`) sont `done` → `completed`.
-3. Tous les slots actifs sont `confirmed` ou `done` → `confirmed`.
-4. Au moins un slot `empty` ou `refused` → `planned`.
-5. Sinon → `planned`.
+Note UI : "bloqué" (au moins un `refused` + un `empty`) = dérivé à l'affichage depuis `planned`, pas une valeur DB.
 
-Note : on a 4 valeurs en DB mais conceptuellement le statut "blocked"
-(au moins un refused + un empty) est utile côté UI. Choix V1 : rester sur
-`planned` en DB, dériver `blocked` à l'affichage par règle UI.
+### 5.3 `cancelOccurrence` — déféré V1.5
 
-### 5.3 Flux assignation prestataire — vision V1 complète
+Pas implémenté en V1. Comportement prévu :
+- `occurrence.statut = cancelled`
+- Cascade tous `ticket_slot` actifs → `cancelled`
+- `logAudit()` avec `raison` dans `after.raison`
 
-#### Principe
+---
 
-Le lien prestataire → slot ne passe **pas** par `provider_assignment` (projet).
-Il passe par le **métier** : `ticket_slot.provider_role` = nom du métier requis,
-`provider.metier_id` = métier du prestataire.
+## 6. Assignation prestataire
 
-Le référent ne voit que les prestataires qui :
-1. Ont le **bon métier** (correspond au slot)
-2. Sont **disponibles** sur le créneau de l'occurrence
+### 6.1 `getProvidersForSlot(slotId)`
 
-#### Table `provider_availability` (À CRÉER en migration 0011)
+Filtre :
+1. `ticket_slot` → `workshop_role_slot` → `metier_id`
+2. `provider.metier_id = metier_id` ET `provider.deleted_at IS NULL`
+3. `provider_availability` (kind `available`) couvre l'occurrence : `availability.start_at <= occurrence.start_at AND availability.end_at >= occurrence.end_at`
+4. `provider_availability.deleted_at IS NULL`
 
-| Colonne | Type | Notes |
+Résultat trié par `provider.nom`.
+
+### 6.2 Disponibilités prestataire — 3 modes
+
+| Mode | Server action | Comportement |
 |---|---|---|
-| `id` | uuid PK | |
-| `provider_id` | uuid FK → provider, cascade | |
-| `start_at` | timestamptz NOT NULL | UTC |
-| `end_at` | timestamptz NOT NULL | UTC |
-| `created_at`, `updated_at`, `deleted_at` | timestamptz | soft delete |
+| Ponctuel | `createAvailability` | Simple insert |
+| Exception | `createDateException` | Si `unavailable` : soft-delete les `available` chevauchants (sauf protégés par `confirmed`) |
+| Récurrent | `createRecurringAvailabilities` | "Full replacement" : purge TOUS les `available` non protégés + génère nouveaux créneaux pour les jours/plages activés dans la fenêtre `[from, to]` |
 
-Sémantique : le prestataire est disponible sur l'intervalle `[start_at, end_at]`.
-Un prestataire peut avoir N disponibilités (créneaux non chevauchants recommandés, non contraints en V1).
-
-#### Interface prestataire `/pro/availability`
-
-- Le prestataire déclare ses créneaux de disponibilité
-- UI : vue calendrier ou liste, ajout/suppression de créneaux
-- Server action : `createAvailability`, `deleteAvailability`
-
-#### Requête `getProvidersForSlot(slotId, centreId)` — version V1 complète
-
-Filtre sur :
-- `provider.metier_id = workshop_role_slot.metier_id` (bon métier pour ce slot)
-- `provider_availability` couvre `occurrence.start_at` → `occurrence.end_at`
-  (`availability.start_at <= occurrence.start_at AND availability.end_at >= occurrence.end_at`)
-- `provider.deleted_at IS NULL`
-- `provider_availability.deleted_at IS NULL`
-
-> **Note V1** : la version actuelle de `getProvidersForSlot` (S9) filtre par
-> `provider_assignment.project_id`. Elle sera remplacée par le filtre métier + disponibilité
-> une fois la table `provider_availability` créée (S10).
-
-#### Vue calendrier référent `/app/calendar`
-
-- Affiche toutes les occurrences du centre sur un agenda mensuel/hebdomadaire
-- Clic sur une occurrence → lien vers `/app/sessions/[id]`
-- Indicateur visuel statut : planifiée / bloquée / confirmée / réalisée
-
-### 5.4 Annulation d'occurrence (cascade)
-
-Server action `cancelOccurrence(occurrenceId, raison)` :
-- En 1 transaction :
-  - `occurrence.statut = cancelled`.
-  - Tous les `ticket_slot` actifs de l'occurrence : `statut = cancelled`.
-  - Audit_log : entrée avec `raison` dans `after.raison`.
+Granularité : 30 min. Format heure : `"HH:MM"` en timezone `America/Guadeloupe`.
 
 ---
 
-## 6. Audit_log
+## 7. Audit log
 
-### 6.1 Entités loggées en V1
+### 7.1 Entités loggées en V1
 
-| Entité | Actions | Niveau de détail |
-|---|---|---|
-| `user` | create, update (rôle, centre_id), soft_delete | before + after diffs |
-| `centre` | create, update, soft_delete | before + after |
-| `project` | create, update, soft_delete | before + after |
-| `provider_assignment` | create, soft_delete | before + after |
-| `ticket_slot` | **transitions de statut uniquement** | `before.statut` + `after.statut` + acteur |
+| Entité | Actions loggées |
+|---|---|
+| `ticket_slot` | Transitions de statut uniquement — `before.statut` + `after.statut` + acteur |
 
-### 6.2 Entités NON loggées en V1
+### 7.2 Déféré V1.5
 
-`workshop_type`, `workshop_role_group`, `workshop_role_slot`, `workshop`,
-`session_group`, `occurrence` création/édition pure (mais l'annulation
-d'occurrence est loggée via le ticket_slot cascade).
+Audit complet prévu (non implémenté) : `user`, `centre`, `project`, `provider_assignment`.
 
-### 6.3 Implémentation
+### 7.3 Implémentation
 
-Fonction unique `logAudit(ctx, action, entityType, entityId, before, after)`
-appelée explicitement dans chaque server action concernée. Pas de trigger
-DB. Pas de magie. Visible dans le code.
+Fonction unique `logAudit(ctx, action, entityType, entityId, before, after)` dans `/server/queries/audit.ts`. Appelée explicitement dans chaque server action. Pas de trigger DB.
 
 ---
 
-## 7. Invariants techniques
+## 8. Auth
 
-### 7.1 Hygiène DB
-- UUID PK partout (`gen_random_uuid()`).
-- `created_at`, `updated_at`, `deleted_at` (timestamptz UTC) sur toutes les
-  tables métier.
-- Soft delete via `deleted_at IS NULL` partout. Pas de DELETE physique
-  (sauf cascade FK Better Auth).
-- Timestamps stockés UTC, conversion `America/Guadeloupe` en présentation.
-
-### 7.2 Server actions
-- Validation Zod en entrée (schemas centralisés dans `/server/validations/`).
-- `requireRole()` en début.
-- `applyCenterScope()` sur toute requête multi-tenant.
-- Transactions Drizzle pour toute mutation multi-table.
-- Retour typé (pas de `any`).
-
-### 7.3 UI
-- React Hook Form + Zod côté client.
-- Pas de FormData parsing brut côté server action — recevoir un objet typé
-  validé.
-- shadcn/ui + Tailwind, pas de CSS custom sauf cas exceptionnel.
-
-### 7.4 Mutations sensibles
-Toute mutation de `ticket_slot.statut` passe par une fonction unique
-`updateTicketSlotStatut(slotId, newStatut, ctx, options)` qui :
-1. Vérifie la transition est autorisée (table §5.1).
-2. Met à jour le slot.
-3. Appelle `recomputeOccurrenceStatut(occurrenceId)`.
-4. Appelle `logAudit()`.
-5. Le tout en 1 transaction.
-
-Aucune autre voie de mutation autorisée.
-
-### 7.5 Auth
-- Better Auth, magic link uniquement en V1.
-- Pas de signup public. Création de compte par invitation admin uniquement
-  (UI à implémenter en V1).
-- Email via Resend.
+- Better Auth, magic link uniquement en V1
+- Pas de signup public — création par invitation admin (`user_invitation`)
+- Email via Resend
+- Hook `signIn` : rejette `user.deleted_at IS NOT NULL`
+- Dispatch post-login :
+  - `super_admin / project_admin` → `/admin`
+  - `referent` → `/app`
+  - `provider` → `/pro`
+- `password_set` = vestige dev local — désactiver avant prod (voir BLK-011)
 
 ---
 
-## 8. Annexe — Plan de migration depuis l'état actuel
+## 9. Invariants techniques
 
-### 8.1 Diff conceptuel
-
-| Action | Cible | Notes |
-|---|---|---|
-| ADD COLUMN | `workshop_type.centre_id` uuid NULL FK → centre | + index |
-| ADD COLUMN | `workshop_type.deleted_at` timestamptz NULL | |
-| CREATE TABLE | `workshop_role_group` | structure §1.1 |
-| CREATE TABLE | `workshop_role_slot` | structure §1.1, incl. `is_optional` |
-| MIGRATE DATA | `provider_role` → 1 `workshop_role_group` par `workshop_type` existant + 1 `workshop_role_slot` par ligne `provider_role` | script SQL/TS, à valider |
-| DROP TABLE | `provider_role` | après vérif migration data |
-| ADD COLUMN | `occurrence.workshop_role_group_id` uuid NULL FK | nullable car données pré-migration possibles (en V1 : aucune) |
-| ADD COLUMN | `ticket_slot.workshop_role_slot_id` uuid NULL | pas de FK stricte, pas de cascade |
-| UPDATE SEED | `/scripts/seed.ts` aligné nouveau modèle | groupes + slots cochés/optionnels |
-
-### 8.2 Ordre d'exécution recommandé
-
-1. Générer migration Drizzle 0003 avec les ADD COLUMN sur tables existantes.
-2. Générer migration Drizzle 0004 avec CREATE TABLE des deux nouvelles.
-3. Script TS de migration de données `provider_role` → nouvelles tables.
-4. Migration Drizzle 0005 avec DROP TABLE `provider_role`.
-5. Refonte seed.
-6. Vérifications post-migration (counts, intégrité FK, statuts CHECK).
-
-### 8.3 État actuel des données
-
-D'après audit : 0 `session_group`, 0 `occurrence`, 0 `ticket`, 0 `ticket_slot`
-en DB. 5 lignes dans `provider_role` (seed). Migration de données triviale
-(5 lignes à transformer).
+- UUID PK partout
+- `TIMESTAMPTZ` stockés UTC, affichage en `America/Guadeloupe`
+- `deleted_at` sur toutes les tables métier (soft delete — pas de DELETE physique en V1)
+- Validation Zod en entrée sur chaque server action (`/server/validations/`)
+- `requireRole()` en début de chaque route serveur
+- `applyCenterScope()` sur toute requête multi-tenant
+- Transactions Drizzle pour toute mutation multi-table
+- Toute mutation `ticket_slot.statut` passe uniquement par `updateTicketSlotStatut()` (vérifie transition → update → `recomputeOccurrenceStatut` → `logAudit` → tout en 1 transaction)
 
 ---
 
-## 9. Glossaire (terminologie figée — toute divergence dans le code = bug)
+## 10. Déféré V1.5
+
+| Feature | Raison du report |
+|---|---|
+| `cancelOccurrence()` cascade | Flux annulation complet, non prioritaire MVP |
+| `confirmed → done` via cron | Infrastructure jobs async hors scope V1 |
+| Audit complet user/centre/project | Volume audit faible V1 (< 3 centres) |
+| Filtre rôle sur référentiels (§2.3 initial) | Admin gère catalogue globalement en V1 |
+| Clone catalogue global → centre | YAGNI V1 |
+| Scoping provider par centre | BDR-017, territoire Guadeloupe |
+| Documents prestataires | Upload/validation infra non prioritaire |
+| RLS Postgres | Isolation applicative suffisante V1 |
+
+---
+
+## 11. Glossaire
 
 | Terme | Définition |
 |---|---|
-| `centre` | Structure cliente, tenant racine. |
-| `project` | Programme financé (REAAP, etc.). Rattaché à 1 centre. |
-| `workshop_type` | Template d'atelier. Peut être global (`centre_id NULL`) ou propre à un centre. |
-| `workshop_role_group` | Groupe de besoins de rôles dans un workshop_type. Le OU est entre groupes. |
-| `workshop_role_slot` | Un besoin individuel (1 personne, 1 rôle, optionnel ou requis). |
-| `workshop` | Atelier concret rattaché à un project, basé sur un workshop_type. |
-| `session_group` | Groupe d'occurrences pour un public donné. |
-| `occurrence` | Une séance datée (workflow ancien : "seance"). |
-| `ticket` | Demande agrégée pour une occurrence. |
-| `ticket_slot` | Un slot de demande individuel = 1 rôle à pourvoir sur 1 occurrence. |
-
-**Terminologie obsolète (ne plus utiliser)** :
-`Session` (ancien Lovable), `Seance` (ancien), `RoleSlot` (ancien),
-`acceptedRoles[]` (ancien Modèle B inline), `provider_role` (table à
-supprimer V1).
+| `centre` | Structure cliente, tenant racine |
+| `project` | Programme financé (REAAP, etc.), rattaché à 1 centre |
+| `metier` | Métier d'un prestataire (ex. Psychologue) — référentiel global |
+| `workshop_type` | Template d'atelier, nullable `centre_id` = global |
+| `workshop_role_group` | Groupe de besoins. OU entre groupes |
+| `workshop_role_slot` | Besoin individuel (1 personne, 1 métier, optionnel ou requis) |
+| `workshop` | Atelier concret rattaché à un projet |
+| `session_group` | Groupe d'occurrences pour un public donné |
+| `occurrence` | Une séance (dates nullable jusqu'à sélection dispo) |
+| `ticket` | Demande agrégée pour une occurrence |
+| `ticket_slot` | Un slot individuel = 1 rôle à pourvoir sur 1 occurrence |
+| `provider_availability` | Créneau de disponibilité prestataire (`available` ou `unavailable`) |
