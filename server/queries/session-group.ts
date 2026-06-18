@@ -295,6 +295,99 @@ export async function getSessionGroupDetail(sessionGroupId: string, centreId: st
 
 export type SessionGroupDetail = NonNullable<Awaited<ReturnType<typeof getSessionGroupDetail>>>;
 
+export async function listSessionGroupsForProject(projectId: string) {
+  const rows = await db
+    .select({
+      id: schema.sessionGroup.id,
+      nom: schema.sessionGroup.nom,
+      centreId: schema.sessionGroup.centreId,
+      centreNom: schema.centre.nom,
+      sessionNumber: schema.sessionGroup.sessionNumber,
+      seanceNumber: schema.sessionGroup.seanceNumber,
+      createdAt: schema.sessionGroup.createdAt,
+      workshopNom: schema.workshop.nom,
+      typeNom: schema.workshopType.nom,
+    })
+    .from(schema.sessionGroup)
+    .innerJoin(schema.workshop, eq(schema.sessionGroup.workshopId, schema.workshop.id))
+    .innerJoin(schema.centre, eq(schema.sessionGroup.centreId, schema.centre.id))
+    .leftJoin(schema.workshopType, eq(schema.workshop.typeId, schema.workshopType.id))
+    .where(
+      and(
+        eq(schema.workshop.projectId, projectId),
+        isNull(schema.sessionGroup.deletedAt),
+        isNull(schema.workshop.deletedAt)
+      )
+    )
+    .orderBy(schema.sessionGroup.createdAt);
+
+  const sessionGroupIds = rows.map((r) => r.id);
+
+  if (sessionGroupIds.length === 0) return [];
+
+  // Aggregate ticket_slot statuts per session_group
+  const slotCounts = await db.execute(sql`
+    SELECT
+      sg.id AS session_group_id,
+      ts.statut,
+      COUNT(*)::int AS cnt
+    FROM session_group sg
+    JOIN workshop w ON w.id = sg.workshop_id AND w.deleted_at IS NULL
+    JOIN occurrence o ON o.session_group_id = sg.id AND o.deleted_at IS NULL
+    JOIN ticket t ON t.occurrence_id = o.id AND t.deleted_at IS NULL
+    JOIN ticket_slot ts ON ts.ticket_id = t.id AND ts.deleted_at IS NULL
+    WHERE w.project_id = ${projectId}
+      AND sg.deleted_at IS NULL
+    GROUP BY sg.id, ts.statut
+  `);
+
+  // Fetch provider names (pending/confirmed slots) per session_group
+  const providerRows = await db.execute(sql`
+    SELECT DISTINCT
+      sg.id AS session_group_id,
+      p.nom AS provider_nom
+    FROM session_group sg
+    JOIN workshop w ON w.id = sg.workshop_id AND w.deleted_at IS NULL
+    JOIN occurrence o ON o.session_group_id = sg.id AND o.deleted_at IS NULL
+    JOIN ticket t ON t.occurrence_id = o.id AND t.deleted_at IS NULL
+    JOIN ticket_slot ts ON ts.ticket_id = t.id AND ts.deleted_at IS NULL AND ts.statut IN ('pending', 'confirmed')
+    JOIN provider p ON p.id = ts.provider_id AND p.deleted_at IS NULL
+    WHERE w.project_id = ${projectId}
+      AND sg.deleted_at IS NULL
+  `);
+
+  type StatutMap = Record<string, number>;
+  const statutsBySg: Record<string, StatutMap> = {};
+  for (const row of slotCounts.rows as { session_group_id: string; statut: string; cnt: number }[]) {
+    if (!statutsBySg[row.session_group_id]) statutsBySg[row.session_group_id] = {};
+    statutsBySg[row.session_group_id][row.statut] = row.cnt;
+  }
+
+  const providersBySg: Record<string, string[]> = {};
+  for (const row of providerRows.rows as { session_group_id: string; provider_nom: string }[]) {
+    if (!providersBySg[row.session_group_id]) providersBySg[row.session_group_id] = [];
+    providersBySg[row.session_group_id].push(row.provider_nom);
+  }
+
+  return rows.map((r) => {
+    const statuts = statutsBySg[r.id] ?? {};
+    return {
+      ...r,
+      providerNoms: providersBySg[r.id] ?? [],
+      statutsAgreges: {
+        empty: statuts["empty"] ?? 0,
+        pending: statuts["pending"] ?? 0,
+        confirmed: statuts["confirmed"] ?? 0,
+        refused: statuts["refused"] ?? 0,
+        skipped: statuts["skipped"] ?? 0,
+        cancelled: statuts["cancelled"] ?? 0,
+      },
+    };
+  });
+}
+
+export type ProjectSessionListItem = Awaited<ReturnType<typeof listSessionGroupsForProject>>[number];
+
 export async function getWorkshopWithType(workshopId: string) {
   const [row] = await db
     .select({

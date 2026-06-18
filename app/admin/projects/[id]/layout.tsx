@@ -42,6 +42,9 @@ export default async function ProjectLayout({ children, params }: Props) {
           <TabsTrigger value="providers" asChild>
             <Link href={`/admin/projects/${id}/providers`}>Prestataires</Link>
           </TabsTrigger>
+          <TabsTrigger value="sessions" asChild>
+            <Link href={`/admin/projects/${id}/sessions`}>Séances</Link>
+          </TabsTrigger>
           <TabsTrigger value="settings" asChild>
             <Link href={`/admin/projects/${id}/settings`}>Paramètres</Link>
           </TabsTrigger>
