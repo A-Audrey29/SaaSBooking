@@ -26,14 +26,14 @@ export async function sendInvitationEmail({
 
   const body = `Bonjour ${displayName},
 
-${inviterName} vous a créé un compte sur ResaPresta, la plateforme
+L'équipe Cap de FEVES Guadeloupe vous a créé un compte sur ResaPresta, la plateforme
 de coordination des ateliers du projet Passerelle CAP.
 
 Pour activer votre compte, choisissez votre mot de passe :
 ${setupUrl}
 
 Ce lien est valable 7 jours. Passé ce délai, demandez à
-${inviterName} de vous renvoyer une invitation.
+l'équipe Cap de FEVES Guadeloupe de vous renvoyer une invitation à l'adresse pole-it@fevesguadeloupeetsaintmartin.fr
 
 Votre identifiant de connexion : ${to}
 
