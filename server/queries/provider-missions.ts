@@ -31,7 +31,7 @@ export async function getMyPendingAndCancelledSlots(providerId: string) {
     .where(
       and(
         eq(schema.ticketSlot.providerId, providerId),
-        inArray(schema.ticketSlot.statut, ["pending", "empty"]),
+        inArray(schema.ticketSlot.statut, ["pending", "empty", "confirmed"]),
         isNotNull(schema.ticketSlot.sentAt),
         isNull(schema.ticketSlot.deletedAt),
         isNull(schema.ticket.deletedAt),
