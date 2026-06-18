@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { createSessionGroup } from "./session.actions";
 
 interface Workshop {
   id: string;
@@ -121,31 +120,22 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
     const checkedList = Array.from(checkedSlotIds);
     if (checkedList.length === 0) { setError("Au moins un rôle requis"); return; }
 
-    // Noms des métiers cochés pour filtrer le calendrier disponibilités
+    setError(null);
+
     const metierNoms = selectedGroup.workshopRoleSlots
       .filter((s) => checkedSlotIds.has(s.id))
       .map((s) => s.metier.nom);
 
-    setError(null);
-    startTransition(async () => {
-      const result = await createSessionGroup({
-        workshopId: selectedWorkshop.id,
-        workshopRoleGroupId: selectedGroup.id,
-        checkedSlotIds: checkedList,
-        nom: nom.trim(),
-        sessionNumber,
-        seanceNumber,
-        notes: notes.trim() || undefined,
-      });
-      if (result.ok) {
-        const p = new URLSearchParams();
-        if (metierNoms.length > 0) p.set("metiers", metierNoms.join(","));
-        p.set("sessionGroupId", result.id);
-        router.push(`/app/availability?${p.toString()}`);
-      } else {
-        setError(result.error);
-      }
-    });
+    const p = new URLSearchParams();
+    if (metierNoms.length > 0) p.set("metiers", metierNoms.join(","));
+    p.set("workshopId", selectedWorkshop.id);
+    p.set("workshopRoleGroupId", selectedGroup.id);
+    p.set("checkedSlotIds", checkedList.join(","));
+    p.set("nom", nom.trim());
+    p.set("sessionNumber", String(sessionNumber));
+    p.set("seanceNumber", String(seanceNumber));
+    if (notes.trim()) p.set("notes", notes.trim());
+    router.push(`/app/availability?${p.toString()}`);
   };
 
   const canProceedStep1 = !!selectedWorkshop && !loadingGroups && !isPending;
@@ -363,8 +353,8 @@ export function SessionForm({ workshops, getRoleGroups }: Props) {
 
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setStep(2)}>Retour</Button>
-            <Button onClick={handleSubmit} disabled={isPending}>
-              {isPending ? "Création…" : "Créer la séance"}
+            <Button onClick={handleSubmit}>
+              Suivant →
             </Button>
           </div>
         </div>

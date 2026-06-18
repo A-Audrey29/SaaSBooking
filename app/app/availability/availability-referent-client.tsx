@@ -388,8 +388,15 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
 
   // ── Panier ────────────────────────────────────────────────────────────────
 
+  const isNewMode = sessionGroup?.id === "";
+
   function resolveTicketSlotId(metierNom: string): string | null {
     if (!sessionGroup) return null;
+    // Mode "new" : pas de ticketSlotId en DB — on utilise le metierNom comme sentinel
+    if (isNewMode) {
+      const exists = sessionGroup.requiredRoles.includes(metierNom);
+      return exists ? metierNom : null;
+    }
     for (const occ of sessionGroup.occurrences) {
       const slot = occ.ticketSlots.find(
         (s) =>
@@ -442,26 +449,59 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
   const requiredRoles = sessionGroup?.requiredRoles ?? [];
   const cartReady = cart.length > 0;
 
+  function handleCancel() {
+    // Mode "new" : rien en DB, retour à la liste des séances
+    if (!sessionGroup || isNewMode) {
+      router.push("/app");
+      return;
+    }
+    // Mode "existing" : séance déjà créée, retour sur sa page
+    router.push(`/app/sessions/${sessionGroup.id}`);
+  }
+
   function handleSend() {
     if (!sessionGroup || !cartReady) return;
     setSendError(null);
     startTransition(async () => {
-      if (slotsToSend.length === 0) {
+      // Mode "existing" sans nouveaux slots → redirect direct
+      if (!isNewMode && slotsToSend.length === 0) {
         router.push(`/app/sessions/${sessionGroup.id}`);
         return;
       }
 
-      const result = await sendCartRequests({
-        sessionGroupId: sessionGroup.id,
-        slots: slotsToSend.map((i) => ({
-          ticketSlotId: i.ticketSlotId,
-          providerId: i.providerId,
-          startAt: i.startAt,
-          endAt: i.endAt,
-        })),
-      });
+      const result = isNewMode && sessionGroup.newSessionParams
+        ? await sendCartRequests({
+            mode: "new",
+            newSessionParams: {
+              workshopId: sessionGroup.newSessionParams.workshopId,
+              workshopRoleGroupId: sessionGroup.newSessionParams.workshopRoleGroupId,
+              checkedSlotIds: sessionGroup.newSessionParams.checkedSlotIds,
+              nom: sessionGroup.newSessionParams.nom,
+              sessionNumber: sessionGroup.newSessionParams.sessionNumber,
+              seanceNumber: sessionGroup.newSessionParams.seanceNumber,
+              notes: sessionGroup.newSessionParams.notes,
+            },
+            slots: cart.map((i) => ({
+              ticketSlotId: i.ticketSlotId,
+              providerId: i.providerId,
+              startAt: i.startAt,
+              endAt: i.endAt,
+              providerRole: i.metierNom,
+            })),
+          })
+        : await sendCartRequests({
+            mode: "existing",
+            sessionGroupId: sessionGroup.id,
+            slots: slotsToSend.map((i) => ({
+              ticketSlotId: i.ticketSlotId,
+              providerId: i.providerId,
+              startAt: i.startAt,
+              endAt: i.endAt,
+            })),
+          });
+
       if (result.ok) {
-        router.push(`/app/sessions/${sessionGroup.id}`);
+        router.push(`/app/sessions/${result.sessionGroupId}`);
       } else {
         setSendError(result.error);
       }
@@ -954,6 +994,15 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
               {requiredRoles.length - cart.length} métier{requiredRoles.length - cart.length > 1 ? "s" : ""} manquant{requiredRoles.length - cart.length > 1 ? "s" : ""}
             </p>
           )}
+
+          <Button
+            variant="ghost"
+            className="w-full text-muted-foreground hover:text-foreground"
+            disabled={isPending}
+            onClick={handleCancel}
+          >
+            Annuler
+          </Button>
         </div>
       )}
 
