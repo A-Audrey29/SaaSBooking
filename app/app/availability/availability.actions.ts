@@ -8,6 +8,8 @@ import { requireRole } from "@/server/context/server-context";
 import { updateTicketSlotStatut } from "@/server/mutations/ticket-slot";
 import { logAudit } from "@/server/queries/audit";
 import { getWorkshopWithType } from "@/server/queries/session-group";
+import { getProviderById } from "@/server/queries/provider";
+import { sendAssignmentEmail } from "@/server/emails/send-assignment";
 
 const CartSlotSchema = z.object({
   // En mode "new", ticketSlotId est le nom du métier (providerRole) car pas encore en DB
@@ -117,6 +119,33 @@ async function handleExistingSession(
       { slotId: slot.ticketSlotId, newStatut: "pending", providerId: slot.providerId },
       ctx
     );
+
+    // Email non-bloquant — échec n'annule pas l'action
+    const [slotData] = await db
+      .select({
+        sessionNom: schema.sessionGroup.nom,
+        centreName: schema.centre.nom,
+        startAt: schema.occurrence.startAt,
+      })
+      .from(schema.ticketSlot)
+      .innerJoin(schema.ticket, eq(schema.ticketSlot.ticketId, schema.ticket.id))
+      .innerJoin(schema.occurrence, eq(schema.ticket.occurrenceId, schema.occurrence.id))
+      .innerJoin(schema.sessionGroup, eq(schema.occurrence.sessionGroupId, schema.sessionGroup.id))
+      .innerJoin(schema.centre, eq(schema.sessionGroup.centreId, schema.centre.id))
+      .where(eq(schema.ticketSlot.id, slot.ticketSlotId));
+
+    if (slotData) {
+      const provider = await getProviderById(slot.providerId);
+      if (provider) {
+        await sendAssignmentEmail({
+          to: provider.email,
+          providerName: provider.nom,
+          sessionNom: slotData.sessionNom,
+          centreName: slotData.centreName,
+          occurrenceDate: slotData.startAt,
+        });
+      }
+    }
   }
 
   revalidatePath(`/app/sessions/${sessionGroupId}`);
@@ -230,6 +259,33 @@ async function handleNewSession(
 
     return sg.id;
   });
+
+  // Emails après commit — non-bloquants
+  const [sgData] = await db
+    .select({ sessionNom: schema.sessionGroup.nom, centreName: schema.centre.nom })
+    .from(schema.sessionGroup)
+    .innerJoin(schema.centre, eq(schema.sessionGroup.centreId, schema.centre.id))
+    .where(eq(schema.sessionGroup.id, sessionGroupId));
+
+  if (sgData) {
+    const [occ] = await db
+      .select({ startAt: schema.occurrence.startAt })
+      .from(schema.occurrence)
+      .where(eq(schema.occurrence.sessionGroupId, sessionGroupId));
+
+    for (const slot of slots) {
+      const provider = await getProviderById(slot.providerId);
+      if (provider) {
+        await sendAssignmentEmail({
+          to: provider.email,
+          providerName: provider.nom,
+          sessionNom: sgData.sessionNom,
+          centreName: sgData.centreName,
+          occurrenceDate: occ?.startAt ?? null,
+        });
+      }
+    }
+  }
 
   revalidatePath("/app/sessions");
   revalidatePath("/app/availability");
