@@ -61,7 +61,7 @@ export function SetupPasswordClient({ token }: SetupPasswordClientProps) {
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Choisissez votre mot de passe</h1>
           <p className="text-muted-foreground">
-            Créez un mot de passe pour activer votre compte Asanblé.
+            Créez un mot de passe pour activer votre compte ResaPresta.
             Vous pourrez ensuite vous connecter sur la page de connexion.
           </p>
         </div>
