@@ -71,7 +71,7 @@ export default async function HomePage() {
         >
           ResaPresta simplifie la mise en relation entre les centres sociaux de
           la Fédération des Espaces de Vie et cEntres Sociaux (FEVES) et leurs
-          prestataires d'ateliers. Planification des séances, suivi des
+          prestataires d&apos;ateliers. Planification des séances, suivi des
           intervenants et coordination multi-sites : tout est centralisé en un
           seul outil, conçu pour le réseau guadeloupéen.
         </p>

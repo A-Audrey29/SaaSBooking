@@ -45,6 +45,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@types/bcrypt": "^6.0.0",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.6",

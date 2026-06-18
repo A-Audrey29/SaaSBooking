@@ -15,7 +15,7 @@ export default async function SetupPasswordPage({
         <div className="max-w-md w-full text-center space-y-4">
           <h1 className="text-2xl font-semibold">Lien invalide</h1>
           <p className="text-muted-foreground">
-            Ce lien d'invitation est manquant ou invalide. Contactez votre
+            Ce lien d&apos;invitation est manquant ou invalide. Contactez votre
             administrateur pour recevoir une nouvelle invitation.
           </p>
         </div>
