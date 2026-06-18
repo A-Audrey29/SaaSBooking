@@ -659,11 +659,11 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                         isToday ? "bg-primary/[0.02]" : ""
                       }`}
                     >
-                      {/* Cellules cliquables par demi-heure */}
+                      {/* Cellules cliquables par demi-heure — z-10 pour passer au-dessus des blocs */}
                       {hasCart && SLOTS.map((s) => (
                         <div
                           key={s}
-                          className="absolute left-0 right-0 hover:bg-primary/8 cursor-pointer transition-colors rounded-sm"
+                          className="absolute left-0 right-0 hover:bg-primary/8 cursor-pointer transition-colors rounded-sm z-10"
                           style={{ top: (s - gridTop) * SLOT_H, height: SLOT_H }}
                           onClick={(e) => handleCellClick(day, s, e)}
                         />
@@ -678,7 +678,7 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                         return (
                           <div
                             key={b.id}
-                            className="absolute overflow-hidden"
+                            className="absolute overflow-hidden z-20"
                             style={{
                               top: top + 1,
                               height: height - 2,
@@ -693,10 +693,12 @@ export function AvailabilityReferentClient({ providers, metierNoms, sessionGroup
                                 ? "repeating-linear-gradient(45deg, #94a3b81a 0px, #94a3b81a 4px, transparent 4px, transparent 9px)"
                                 : undefined,
                               opacity: b.isPending ? 0.65 : 1,
+                              cursor: hasCart ? "pointer" : "default",
                             }}
                             onMouseEnter={() => setHoveredSlot(b)}
                             onMouseLeave={() => setHoveredSlot(null)}
                             onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                            onClick={hasCart ? (e) => handleCellClick(day, decimalHour(b.startAt), e) : undefined}
                           >
                             <div className="px-1.5 py-1 h-full flex flex-col justify-start gap-px">
                               <span
