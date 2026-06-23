@@ -8,5 +8,6 @@ export * from "./project-centre";
 export * from "./provider";
 export * from "./session";
 export * from "./ticket";
+export * from "./password-reset";
 export * from "./user-invitation";
 export * from "./workshop";
