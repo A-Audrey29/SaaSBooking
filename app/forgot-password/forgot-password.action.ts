@@ -10,8 +10,11 @@ export async function requestPasswordReset(
   formData: FormData
 ): Promise<{ sent: true }> {
   const email = String(formData.get("email") ?? "");
+  console.log("[forgot-password] 1. action appelée, email:", email);
+
   try {
     const validated = RequestPasswordResetSchema.parse({ email });
+    console.log("[forgot-password] 2. email validé:", validated.email);
 
     const [found] = await db
       .select({ id: schema.user.id, name: schema.user.name, passwordSet: schema.user.passwordSet })
@@ -23,17 +26,19 @@ export async function requestPasswordReset(
         )
       );
 
-    // Silencieux si user inexistant ou sans mot de passe défini (pas d'énumération)
+    console.log("[forgot-password] 3. user trouvé:", found ? { id: found.id, passwordSet: found.passwordSet } : "non trouvé");
+
     if (!found || !found.passwordSet) {
+      console.log("[forgot-password] 4. STOP — user inexistant ou passwordSet=false");
       return { sent: true };
     }
 
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 heure
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
     const token = crypto.randomUUID();
 
+    console.log("[forgot-password] 5. insertion token en base...");
     await db.transaction(async (tx) => {
-      // Invalide les tokens précédents non utilisés de cet utilisateur
       await tx
         .delete(schema.passwordReset)
         .where(eq(schema.passwordReset.userId, found.id));
@@ -44,16 +49,19 @@ export async function requestPasswordReset(
         expiresAt,
       });
     });
+    console.log("[forgot-password] 6. token inséré en base");
 
-    await sendPasswordResetEmail({
+    console.log("[forgot-password] 7. envoi email...");
+    const result = await sendPasswordResetEmail({
       to: validated.email,
       name: found.name,
       token,
     });
+    console.log("[forgot-password] 8. résultat envoi email:", result);
 
     return { sent: true };
-  } catch {
-    // On ne propage jamais d'erreur interne — même réponse côté client
+  } catch (error) {
+    console.error("[forgot-password] ERREUR:", error);
     return { sent: true };
   }
 }
