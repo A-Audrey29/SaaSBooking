@@ -6,8 +6,10 @@ import { RequestPasswordResetSchema } from "@/server/validations/user";
 import { sendPasswordResetEmail } from "@/server/emails/send-password-reset";
 
 export async function requestPasswordReset(
-  email: string
-): Promise<{ ok: true }> {
+  _prevState: { sent: true } | undefined,
+  formData: FormData
+): Promise<{ sent: true }> {
+  const email = String(formData.get("email") ?? "");
   try {
     const validated = RequestPasswordResetSchema.parse({ email });
 
@@ -23,7 +25,7 @@ export async function requestPasswordReset(
 
     // Silencieux si user inexistant ou sans mot de passe défini (pas d'énumération)
     if (!found || !found.passwordSet) {
-      return { ok: true };
+      return { sent: true };
     }
 
     const now = new Date();
@@ -49,9 +51,9 @@ export async function requestPasswordReset(
       token,
     });
 
-    return { ok: true };
+    return { sent: true };
   } catch {
-    // On ne propage jamais d'erreur interne — mêm réponse côté client
-    return { ok: true };
+    // On ne propage jamais d'erreur interne — même réponse côté client
+    return { sent: true };
   }
 }
