@@ -60,6 +60,15 @@ export const SetupPasswordSchema = z.object({
   password: z.string().min(8, "Mot de passe min 8 caractères"),
 });
 
+export const RequestPasswordResetSchema = z.object({
+  email: z.string().email("Format email invalide").toLowerCase().trim(),
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1, "Token requis"),
+  password: z.string().min(8, "Mot de passe min 8 caractères"),
+});
+
 export const ChangePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Mot de passe actuel requis"),
@@ -77,3 +86,5 @@ export type SoftDeleteUserInput = z.infer<typeof SoftDeleteUserSchema>;
 export type ResendInvitationInput = z.infer<typeof ResendInvitationSchema>;
 export type SetupPasswordInput = z.infer<typeof SetupPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
+export type RequestPasswordResetInput = z.infer<typeof RequestPasswordResetSchema>;
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
