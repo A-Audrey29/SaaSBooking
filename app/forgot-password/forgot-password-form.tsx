@@ -4,18 +4,6 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { requestPasswordReset } from "./forgot-password.action";
 
-type ActionState = { sent: true } | undefined;
-
-async function formAction(
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const email = String(formData.get("email") ?? "");
-  await requestPasswordReset(email);
-  // Toujours afficher le message de succès générique (pas d'énumération)
-  return { sent: true };
-}
-
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -30,7 +18,7 @@ function SubmitButton() {
 }
 
 export function ForgotPasswordForm() {
-  const [state, action] = useActionState(formAction, undefined);
+  const [state, action] = useActionState(requestPasswordReset, undefined);
 
   if (state?.sent) {
     return (
