@@ -70,24 +70,29 @@ export async function createDateException(
     ? gpDateTimeToUtc(input.date, endH, endM)
     : gpDateTimeToUtc(addDaysISO(input.date, 1), 0, 0);
 
+  const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
+    aStart < bEnd && aEnd > bStart;
+
   let deleted = 0;
+  // Fragments "available" à réinsérer après découpage autour de l'exception.
+  const toReinsert: { startAt: Date; endAt: Date }[] = [];
 
   if (input.kind === "unavailable") {
-    const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
-      aStart < bEnd && aEnd > bStart;
-
     const [existing, bookings] = await Promise.all([
       getMyAvailabilitiesInRange(prov.id, dayStartUtc, dayEndUtc),
       getMyConfirmedBookings(prov.id, dayStartUtc, dayEndUtc),
     ]);
 
+    const confirmedBookings = bookings.filter(
+      (b): b is typeof b & { startAt: Date; endAt: Date } =>
+        b.startAt !== null && b.endAt !== null
+    );
+
     const toDelete = existing.filter(
       (a) =>
         a.kind === "available" &&
         overlaps(a.startAt, a.endAt, dayStartUtc, dayEndUtc) &&
-        !bookings
-          .filter((b): b is typeof b & { startAt: Date; endAt: Date } => b.startAt !== null && b.endAt !== null)
-          .some((b) => overlaps(a.startAt, a.endAt, b.startAt, b.endAt))
+        !confirmedBookings.some((b) => overlaps(a.startAt, a.endAt, b.startAt, b.endAt))
     );
 
     if (toDelete.length > 0) {
@@ -102,15 +107,29 @@ export async function createDateException(
           )
         );
       deleted = toDelete.length;
+
+      // Exception partielle (plage horaire précise) : recréer les fragments
+      // qui débordent AVANT et APRÈS l'exception dans le créneau supprimé.
+      if (input.startTime && input.endTime) {
+        for (const a of toDelete) {
+          if (a.startAt < dayStartUtc) {
+            toReinsert.push({ startAt: a.startAt, endAt: dayStartUtc });
+          }
+          if (a.endAt > dayEndUtc) {
+            toReinsert.push({ startAt: dayEndUtc, endAt: a.endAt });
+          }
+        }
+      }
     }
   }
 
-  await db.insert(schema.providerAvailability).values({
-    providerId: prov.id,
-    startAt: dayStartUtc,
-    endAt: dayEndUtc,
-    kind: input.kind,
-  });
+  // Insérer le créneau d'exception + les fragments découpés en une seule passe.
+  const insertValues: { providerId: string; startAt: Date; endAt: Date; kind: "available" | "unavailable" }[] = [
+    { providerId: prov.id, startAt: dayStartUtc, endAt: dayEndUtc, kind: input.kind },
+    ...toReinsert.map((r) => ({ providerId: prov.id, startAt: r.startAt, endAt: r.endAt, kind: "available" as const })),
+  ];
+
+  await db.insert(schema.providerAvailability).values(insertValues);
 
   return { created: 1, deleted };
 }
