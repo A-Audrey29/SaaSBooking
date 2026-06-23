@@ -27,6 +27,9 @@ coverage
 .DS_Store
 *.pem
 
+# Local side projects (not part of this repo)
+ResaPrestaTutoRef/
+
 # Claude Code (local only, never commit)
 .claude/worktrees/
 .claude/settings.local.json

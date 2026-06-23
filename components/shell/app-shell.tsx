@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Avatar } from "./avatar";
+import { authClient } from "@/lib/auth-client";
 
 export interface NavItem {
   href: string;
@@ -27,6 +28,12 @@ function isActive(pathname: string, href: string, exact?: boolean): boolean {
 
 export function AppShell({ brand, spaceLabel, userName, items, children }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await authClient.signOut();
+    router.push("/login");
+  }
 
   return (
     <>
@@ -68,18 +75,18 @@ export function AppShell({ brand, spaceLabel, userName, items, children }: AppSh
         {/* Footer */}
         <div className="border-t border-ink-150 px-3 py-3 space-y-1">
           <Link
-            href="/"
-            className="block px-2.5 py-1.5 text-t-sm text-ink-500 hover:text-ink-700 rounded-md hover:bg-ink-50 transition-colors"
-          >
-            Changer d&apos;espace
-          </Link>
-          <Link
             href="/account"
             className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-ink-50 transition-colors"
           >
             <Avatar name={userName} size={24} />
             <span className="text-t-sm text-ink-700 truncate">{userName}</span>
           </Link>
+          <button
+            onClick={handleSignOut}
+            className="w-full text-left px-2.5 py-1.5 text-t-sm text-ink-500 hover:text-red-600 rounded-md hover:bg-ink-50 transition-colors"
+          >
+            Déconnexion
+          </button>
         </div>
       </aside>
 
