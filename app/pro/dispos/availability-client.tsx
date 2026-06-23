@@ -491,8 +491,11 @@ function BookingDrawer({
 function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
   const [recurring, setRecurring] = useState<RecurringDay[]>(defaultRecurring);
-  const [from, setFrom] = useState(todayISO());
-  const [to, setTo] = useState(addDaysISO(todayISO(), 56)); // 8 semaines par défaut
+  // Valeurs initiales stables pour le calcul isDirty (recapturées à chaque ouverture).
+  const [initialFrom] = useState(todayISO());
+  const [initialTo] = useState(addDaysISO(todayISO(), 56));
+  const [from, setFrom] = useState(initialFrom);
+  const [to, setTo] = useState(initialTo);
   const [exceptionDate, setExceptionDate] = useState(todayISO());
   const [exceptionKind, setExceptionKind] = useState<"available" | "unavailable">("unavailable");
   const [exceptionStartTime, setExceptionStartTime] = useState("");
@@ -501,6 +504,29 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [confirmClose, setConfirmClose] = useState(false);
+
+  const isDirty =
+    JSON.stringify(recurring) !== JSON.stringify(defaultRecurring) ||
+    from !== initialFrom ||
+    to !== initialTo ||
+    exceptionStartTime !== "" ||
+    exceptionEndTime !== "" ||
+    exceptionDate !== todayISO() ||
+    exceptionKind !== "unavailable";
+
+  function handleClose() {
+    setConfirmClose(false);
+    onClose();
+  }
+
+  function handleCloseWithGuard() {
+    if (isDirty) {
+      setConfirmClose(true);
+    } else {
+      handleClose();
+    }
+  }
 
   function save() {
     setError(null);
@@ -516,6 +542,7 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
       if (res.deleted > 0) parts.push(`${res.deleted} créneau(x) supprimé(s)`);
       setInfo(parts.length > 0 ? parts.join(", ") + "." : "Aucun changement (rien à créer ni supprimer).");
       router.refresh();
+      handleClose();
     });
   }
 
@@ -538,18 +565,20 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
       if (res.deleted > 0) parts.push(`${res.deleted} créneau(x) existant(s) supprimé(s)`);
       setInfo(parts.join(", ") + ".");
       router.refresh();
+      handleClose();
     });
   }
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full sm:max-w-[460px] overflow-y-auto flex flex-col">
-        <SheetHeader>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) handleCloseWithGuard(); }}>
+      <SheetContent className="w-full sm:max-w-[460px] flex flex-col h-full">
+        <SheetHeader className="shrink-0">
           <SheetDescription>Planning</SheetDescription>
           <SheetTitle>Modifier mes disponibilités</SheetTitle>
         </SheetHeader>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="mt-4 flex-1">
+        <div className="flex-1 overflow-y-auto min-h-0">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="mt-4">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="recurring">Récurrent</TabsTrigger>
             <TabsTrigger value="window">Période</TabsTrigger>
@@ -746,20 +775,46 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
           </TabsContent>
         </Tabs>
 
-        {error && <p className="text-t-sm text-destructive">{error}</p>}
-        {info && <p className="text-t-sm text-s-confirmed-ink">{info}</p>}
+        {error && <p className="text-t-sm text-destructive mt-3">{error}</p>}
+        {info && <p className="text-t-sm text-s-confirmed-ink mt-3">{info}</p>}
+        </div>
 
-        <SheetFooter className="mt-4">
-          <Button
-            onClick={activeTab === "exceptions" ? saveException : save}
-            disabled={isPending}
-            className="flex-1"
-          >
-            {isPending ? "Enregistrement…" : "Enregistrer"}
-          </Button>
-          <Button variant="outline" onClick={onClose}>
-            Fermer
-          </Button>
+        <SheetFooter className="mt-4 shrink-0">
+          {confirmClose ? (
+            <div className="flex-1 rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+              <p className="text-t-sm text-amber-800 font-medium">
+                Des modifications non enregistrées seront perdues.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={activeTab === "exceptions" ? saveException : save}
+                  disabled={isPending}
+                  className="flex-1"
+                >
+                  {isPending ? "Enregistrement…" : "Enregistrer mes modifications"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setConfirmClose(false); handleClose(); }}
+                >
+                  Quitter sans enregistrer
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Button
+                onClick={activeTab === "exceptions" ? saveException : save}
+                disabled={isPending}
+                className="flex-1"
+              >
+                {isPending ? "Enregistrement…" : "Enregistrer"}
+              </Button>
+              <Button variant="outline" onClick={handleCloseWithGuard}>
+                Fermer
+              </Button>
+            </>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>
