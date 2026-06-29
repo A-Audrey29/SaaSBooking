@@ -40,6 +40,7 @@ scripts/check-*.ts
 scripts/apply-*.ts
 scripts/fix-*.ts
 scripts/test-*.ts
+scripts/delete-*.ts
 
 # Graphify (generated artifacts)
 graphify-out/
