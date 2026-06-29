@@ -501,6 +501,7 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
   const [exceptionStartTime, setExceptionStartTime] = useState("");
   const [exceptionEndTime, setExceptionEndTime] = useState("");
   const [activeTab, setActiveTab] = useState<"recurring" | "window" | "exceptions">("recurring");
+  const [hasException, setHasException] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -528,42 +529,29 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
     }
   }
 
-  function save() {
+  function saveAll() {
     setError(null);
     setInfo(null);
     startTransition(async () => {
-      const res = await createRecurringAvailabilitiesAction({ weekdays: recurring, from, to });
-      if (!res.ok) {
-        setError(res.error);
+      const res1 = await createRecurringAvailabilitiesAction({ weekdays: recurring, from, to });
+      if (!res1.ok) {
+        setError(res1.error);
         return;
       }
-      const parts = [];
-      if (res.created > 0) parts.push(`${res.created} créneau(x) créé(s)`);
-      if (res.deleted > 0) parts.push(`${res.deleted} créneau(x) supprimé(s)`);
-      setInfo(parts.length > 0 ? parts.join(", ") + "." : "Aucun changement (rien à créer ni supprimer).");
-      router.refresh();
-      handleClose();
-    });
-  }
 
-  function saveException() {
-    setError(null);
-    setInfo(null);
-    startTransition(async () => {
-      const res = await createDateExceptionAction({
-        date: exceptionDate,
-        kind: exceptionKind,
-        startTime: exceptionStartTime || undefined,
-        endTime: exceptionEndTime || undefined,
-      });
-      if (!res.ok) {
-        setError(res.error);
-        return;
+      if (hasException) {
+        const res2 = await createDateExceptionAction({
+          date: exceptionDate,
+          kind: exceptionKind,
+          startTime: exceptionStartTime || undefined,
+          endTime: exceptionEndTime || undefined,
+        });
+        if (!res2.ok) {
+          setError(res2.error);
+          return;
+        }
       }
-      const label = exceptionKind === "unavailable" ? "Indisponible" : "Disponible";
-      const parts = [`Journée marquée "${label}"`];
-      if (res.deleted > 0) parts.push(`${res.deleted} créneau(x) existant(s) supprimé(s)`);
-      setInfo(parts.join(", ") + ".");
+
       router.refresh();
       handleClose();
     });
@@ -571,10 +559,22 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) handleCloseWithGuard(); }}>
-      <SheetContent className="w-full sm:max-w-[460px] flex flex-col h-full">
+      <SheetContent className="w-full sm:max-w-[460px] flex flex-col h-full" hideCloseButton>
         <SheetHeader className="shrink-0">
-          <SheetDescription>Planning</SheetDescription>
-          <SheetTitle>Modifier mes disponibilités</SheetTitle>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <SheetDescription>Planning</SheetDescription>
+              <SheetTitle>Modifier mes disponibilités</SheetTitle>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 pt-1">
+              <Button variant="outline" size="sm" onClick={handleCloseWithGuard} disabled={isPending}>
+                Fermer
+              </Button>
+              <Button size="sm" onClick={saveAll} disabled={isPending}>
+                {isPending ? "Enregistrement…" : "Enregistrer"}
+              </Button>
+            </div>
+          </div>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto min-h-0">
@@ -725,10 +725,10 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
               <Input
                 type="date"
                 value={exceptionDate}
-                onChange={(e) => setExceptionDate(e.target.value)}
+                onChange={(e) => { setExceptionDate(e.target.value); setHasException(true); }}
                 className="h-8"
               />
-              <Select value={exceptionKind} onValueChange={(v) => setExceptionKind(v as typeof exceptionKind)}>
+              <Select value={exceptionKind} onValueChange={(v) => { setExceptionKind(v as typeof exceptionKind); setHasException(true); }}>
                 <SelectTrigger className="h-8 w-40">
                   <SelectValue />
                 </SelectTrigger>
@@ -744,7 +744,7 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
                 <Input
                   type="time"
                   value={exceptionStartTime}
-                  onChange={(e) => setExceptionStartTime(e.target.value)}
+                  onChange={(e) => { setExceptionStartTime(e.target.value); setHasException(true); }}
                   className="h-8 w-28"
                   placeholder="Début"
                 />
@@ -752,7 +752,7 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
                 <Input
                   type="time"
                   value={exceptionEndTime}
-                  onChange={(e) => setExceptionEndTime(e.target.value)}
+                  onChange={(e) => { setExceptionEndTime(e.target.value); setHasException(true); }}
                   className="h-8 w-28"
                   placeholder="Fin"
                 />
@@ -779,43 +779,24 @@ function EditorDrawer({ open, onClose }: { open: boolean; onClose: () => void })
         {info && <p className="text-t-sm text-s-confirmed-ink mt-3">{info}</p>}
         </div>
 
-        <SheetFooter className="mt-4 shrink-0">
-          {confirmClose ? (
-            <div className="flex-1 rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
-              <p className="text-t-sm text-amber-800 font-medium">
-                Des modifications non enregistrées seront perdues.
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  onClick={activeTab === "exceptions" ? saveException : save}
-                  disabled={isPending}
-                  className="flex-1"
-                >
-                  {isPending ? "Enregistrement…" : "Enregistrer mes modifications"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => { setConfirmClose(false); handleClose(); }}
-                >
-                  Quitter sans enregistrer
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
+        {confirmClose && (
+          <div className="mt-4 shrink-0 rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+            <p className="text-t-sm text-amber-800 font-medium">
+              Des modifications non enregistrées seront perdues.
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={saveAll} disabled={isPending} className="flex-1">
+                {isPending ? "Enregistrement…" : "Enregistrer mes modifications"}
+              </Button>
               <Button
-                onClick={activeTab === "exceptions" ? saveException : save}
-                disabled={isPending}
-                className="flex-1"
+                variant="outline"
+                onClick={() => { setConfirmClose(false); handleClose(); }}
               >
-                {isPending ? "Enregistrement…" : "Enregistrer"}
+                Quitter sans enregistrer
               </Button>
-              <Button variant="outline" onClick={handleCloseWithGuard}>
-                Fermer
-              </Button>
-            </>
-          )}
-        </SheetFooter>
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );

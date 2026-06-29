@@ -36,6 +36,16 @@ const items: NavItem[] = [
       </svg>
     ),
   },
+  {
+    href: "/contact",
+    label: "Contact",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+        <rect x="2" y="4" width="20" height="16" rx="2" />
+        <path d="M2 7l10 7 10-7" />
+      </svg>
+    ),
+  },
 ];
 
 export default function ProLayout({ children }: { children: React.ReactNode }) {
