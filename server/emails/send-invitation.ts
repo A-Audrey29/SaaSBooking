@@ -51,7 +51,7 @@ L'équipe Cap pour FEVES`;
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? "noreply@resapresta.feves971.fr",
+      from: process.env.RESEND_FROM_EMAIL ?? "noreply@resapresta.fr",
       to,
       subject: "Votre accès à ResaPresta — Configurez votre mot de passe",
       text: body,
