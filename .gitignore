@@ -26,6 +26,7 @@ coverage
 # Misc
 .DS_Store
 *.pem
+*.pdf
 
 # Local side projects (not part of this repo)
 ResaPrestaTutoRef/
