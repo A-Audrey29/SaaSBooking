@@ -1,6 +1,7 @@
 import { getServerContext } from "@/server/context/server-context";
 import { redirect } from "next/navigation";
 import Image from "next/image";
+import { LegalFooter } from "@/components/legal-footer";
 
 export default async function HomePage() {
   const ctx = await getServerContext();
@@ -41,7 +42,7 @@ export default async function HomePage() {
       </header>
 
       {/* Hero */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center">
         <div className="mb-8">
           <Image
             src="/logo-feves.jpg"
@@ -85,12 +86,7 @@ export default async function HomePage() {
         </a>
       </main>
 
-      {/* Footer */}
-      <footer className="py-5 text-center border-t bg-white">
-        <p className="text-xs" style={{ color: "var(--ink-400)" }}>
-          © {new Date().getFullYear()} FEVES Guadeloupe &amp; St Martin · ResaPresta V1
-        </p>
-      </footer>
+      <LegalFooter />
     </div>
   );
 }

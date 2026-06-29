@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Avatar } from "./avatar";
 import { authClient } from "@/lib/auth-client";
+import { LegalFooter } from "@/components/legal-footer";
 
 export interface NavItem {
   href: string;
@@ -72,7 +73,7 @@ export function AppShell({ brand, spaceLabel, userName, items, children }: AppSh
           })}
         </nav>
 
-        {/* Footer */}
+        {/* User */}
         <div className="border-t border-ink-150 px-3 py-3 space-y-1">
           <Link
             href="/account"
@@ -101,9 +102,21 @@ export function AppShell({ brand, spaceLabel, userName, items, children }: AppSh
       </header>
 
       {/* ── Main content ── */}
-      <main className="md:ml-60 pt-12 md:pt-0 pb-16 md:pb-0 min-h-screen">
-        {children}
-      </main>
+      <div className="md:ml-60 pt-12 md:pt-0 pb-28 md:pb-0 min-h-screen flex flex-col">
+        <main className="flex-1">
+          {children}
+        </main>
+        <div className="hidden md:block">
+          <LegalFooter />
+        </div>
+      </div>
+
+      {/* ── Mobile legal links ── */}
+      <div className="md:hidden fixed bottom-14 inset-x-0 bg-sidebar border-t border-ink-150 z-20 flex justify-center gap-4 py-1.5 px-4">
+        <Link href="/cgu" className="text-t-xs text-ink-400 hover:underline">CGU</Link>
+        <Link href="/mentions-legales" className="text-t-xs text-ink-400 hover:underline">Mentions légales</Link>
+        <Link href="/confidentialite" className="text-t-xs text-ink-400 hover:underline">Confidentialité</Link>
+      </div>
 
       {/* ── Mobile tabbar ── */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 h-14 bg-sidebar border-t border-ink-150 z-30 flex items-center">

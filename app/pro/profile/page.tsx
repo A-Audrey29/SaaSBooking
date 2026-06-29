@@ -3,6 +3,7 @@ import { db, schema } from "@/server/db/client";
 import { requireRole } from "@/server/context/server-context";
 import { listAllMetiers } from "@/server/queries/metier";
 import { ProfileForm, ProfileCreateForm } from "./profile-form";
+import { LegalFooter } from "@/components/legal-footer";
 
 export default async function ProfilePage() {
   const ctx = await requireRole("provider");
@@ -29,21 +30,25 @@ export default async function ProfilePage() {
   if (!provider) {
     const metiers = await listAllMetiers();
     return (
-      <div className="px-4 md:px-8 py-6 md:py-8 max-w-[760px] mx-auto space-y-5">
-        <div>
-          <h1 className="text-[24px] font-semibold tracking-tight">Créer mon profil</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">
-            Renseignez vos informations pour apparaître dans l&apos;annuaire des prestataires.
-          </p>
+      <>
+        <div className="px-4 md:px-8 py-6 md:py-8 max-w-[760px] mx-auto space-y-5">
+          <div>
+            <h1 className="text-[24px] font-semibold tracking-tight">Créer mon profil</h1>
+            <p className="text-[13px] text-muted-foreground mt-1">
+              Renseignez vos informations pour apparaître dans l&apos;annuaire des prestataires.
+            </p>
+          </div>
+          <section className="rounded-xl border border-border bg-card p-5">
+            <ProfileCreateForm metiers={metiers} />
+          </section>
         </div>
-        <section className="rounded-xl border border-border bg-card p-5">
-          <ProfileCreateForm metiers={metiers} />
-        </section>
-      </div>
+        <LegalFooter />
+      </>
     );
   }
 
   return (
+    <>
     <div className="px-4 md:px-8 py-6 md:py-8 max-w-[760px] mx-auto space-y-5">
       <div>
         <h1 className="text-[24px] font-semibold tracking-tight">{provider.nom}</h1>
@@ -83,5 +88,7 @@ export default async function ProfilePage() {
         />
       </section>
     </div>
+    <LegalFooter />
+    </>
   );
 }

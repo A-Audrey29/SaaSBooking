@@ -26,6 +26,7 @@ coverage
 # Misc
 .DS_Store
 *.pem
+*.pdf
 
 # Local side projects (not part of this repo)
 ResaPrestaTutoRef/
@@ -39,6 +40,7 @@ scripts/check-*.ts
 scripts/apply-*.ts
 scripts/fix-*.ts
 scripts/test-*.ts
+scripts/delete-*.ts
 
 # Graphify (generated artifacts)
 graphify-out/
