@@ -26,19 +26,51 @@ export async function sendInvitationEmail({
 
   const body = `Bonjour ${displayName},
 
-L'équipe Cap de FEVES Guadeloupe vous a créé un compte sur ResaPresta, la plateforme
-de coordination des ateliers du projet Passerelle CAP.
+L'équipe Cap de FEVES Guadeloupe vous a créé un compte sur ResaPresta, la plateforme de coordination des ateliers du projet Passerelle CAP.
 
-Pour activer votre compte, choisissez votre mot de passe :
-${setupUrl}
+─────────────────────────────────
+COMMENT ACCÉDER À VOTRE COMPTE ?
+─────────────────────────────────
 
-Ce lien est valable 7 jours. Passé ce délai, demandez à
-l'équipe Cap de FEVES Guadeloupe de vous renvoyer une invitation à l'adresse pole-it@fevesguadeloupeetsaintmartin.fr
+1. Cliquez sur le lien ci-dessous pour choisir votre mot de passe :
+   ${setupUrl}
+
+2. Une fois votre mot de passe créé, vous serez dirigé(e) vers la page de connexion.
+   Entrez votre adresse e-mail et le mot de passe que vous venez de choisir.
+
+3. Vous êtes connecté(e) !
+
+─────────────────────────────────
+COMMENT REVENIR SUR LA PLATEFORME ?
+─────────────────────────────────
+
+• Depuis votre navigateur internet :
+  Tapez l'adresse suivante : www.resapresta.fr
+
+• Si vous utilisez Passerelle Cap :
+  Rendez-vous dans l'onglet « Gestion des ateliers »
+
+─────────────────────────────────
 
 Votre identifiant de connexion : ${to}
 
----
-L'équipe Cap pour FEVES`;
+Important : ce lien est valable 7 jours.
+Passé ce délai, un nouveau lien vous sera nécessaire.
+
+─────────────────────────────────
+BESOIN D'AIDE ?
+─────────────────────────────────
+
+Notre service support est à votre disposition pour toute question :
+📧 pole-it@fevesguadeloupeetsaintmartin.fr
+
+⚠️  Ce message est envoyé automatiquement — merci de ne pas y répondre directement.
+    Toute demande adressée à cette boîte ne sera pas traitée.
+
+─────────────────────────────────
+
+Cordialement,
+L'équipe Cap pour FEVES Guadeloupe`;
 
   if (!process.env.RESEND_API_KEY || process.env.NODE_ENV !== "production") {
     console.log("[send-invitation] Email non envoyé (dev/missing key)", {
