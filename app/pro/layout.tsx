@@ -48,7 +48,7 @@ const items: NavItem[] = [
   },
   {
     href: "/pro/aide",
-    label: "Aide",
+    label: "FAQ",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
         <circle cx="12" cy="12" r="10" />
