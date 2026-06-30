@@ -13,6 +13,7 @@ export function LegalFooter() {
         <Link href="/confidentialite" className="hover:underline hover:text-ink-600 transition-colors">
           Politique de confidentialité
         </Link>
+        <span>© FEVES 2026</span>
       </p>
     </footer>
   );
