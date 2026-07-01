@@ -3,7 +3,6 @@ import { db, schema } from "@/server/db/client";
 import { requireRole } from "@/server/context/server-context";
 import { listAllMetiers } from "@/server/queries/metier";
 import { ProfileForm, ProfileCreateForm } from "./profile-form";
-import { LegalFooter } from "@/components/legal-footer";
 
 export default async function ProfilePage() {
   const ctx = await requireRole("provider");
@@ -42,7 +41,6 @@ export default async function ProfilePage() {
             <ProfileCreateForm metiers={metiers} />
           </section>
         </div>
-        <LegalFooter />
       </>
     );
   }
@@ -88,7 +86,6 @@ export default async function ProfilePage() {
         />
       </section>
     </div>
-    <LegalFooter />
     </>
   );
 }

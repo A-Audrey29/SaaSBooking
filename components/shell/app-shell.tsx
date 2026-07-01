@@ -116,6 +116,7 @@ export function AppShell({ brand, spaceLabel, userName, items, children }: AppSh
         <Link href="/cgu" className="text-t-xs text-ink-400 hover:underline">CGU</Link>
         <Link href="/mentions-legales" className="text-t-xs text-ink-400 hover:underline">Mentions légales</Link>
         <Link href="/confidentialite" className="text-t-xs text-ink-400 hover:underline">Confidentialité</Link>
+        <span className="text-t-xs text-ink-400">© FEVES 2026</span>
       </div>
 
       {/* ── Mobile tabbar ── */}
