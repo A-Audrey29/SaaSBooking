@@ -6,7 +6,7 @@ export default function AideProviderPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-10">
       <div>
-        <h1 className="text-h-md font-bold text-ink-900">Centre d'aide</h1>
+        <h1 className="text-h-md font-bold text-ink-900">Centre d&apos;aide</h1>
         <p className="text-t-sm text-ink-500 mt-1">Espace prestataire — ResaPresta</p>
       </div>
 
@@ -31,7 +31,7 @@ export default function AideProviderPage() {
             answer: (
               <>
                 Depuis votre espace, cliquez sur <strong>Demandes</strong> dans le menu.
-                Vous voyez toutes les demandes en attente de réponse, ainsi que l'historique
+                Vous voyez toutes les demandes en attente de réponse, ainsi que l&apos;historique
                 de vos missions passées.
               </>
             ),
@@ -85,7 +85,7 @@ export default function AideProviderPage() {
             answer: (
               <>
                 Allez dans <strong>Mes dispos</strong> et cliquez sur un créneau dans le calendrier.
-                Choisissez « Disponible » et indiquez si c'est une occurrence ponctuelle ou récurrente
+                Choisissez « Disponible » et indiquez si c&apos;est une occurrence ponctuelle ou récurrente
                 (ex. tous les mardis matin).
               </>
             ),
@@ -125,7 +125,7 @@ export default function AideProviderPage() {
       />
 
       <p className="text-t-xs text-ink-400 pb-4">
-        Besoin d'aide supplémentaire ? Contactez le référent du centre social concerné.
+        Besoin d&apos;aide supplémentaire ? Contactez le référent du centre social concerné.
       </p>
     </div>
   );
