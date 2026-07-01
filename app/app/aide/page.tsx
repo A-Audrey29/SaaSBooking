@@ -6,7 +6,7 @@ export default function AideReferentPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-10">
       <div>
-        <h1 className="text-h-md font-bold text-ink-900">Centre d'aide</h1>
+        <h1 className="text-h-md font-bold text-ink-900">Centre d&apos;aide</h1>
         <p className="text-t-sm text-ink-500 mt-1">Espace référent — ResaPresta</p>
       </div>
 
@@ -37,7 +37,7 @@ export default function AideReferentPage() {
               <>
                 Depuis votre tableau de bord, cliquez sur <strong>Nouvelle séance</strong>.
                 Choisissez un atelier existant ou créez-en un nouveau via le bouton rapide.
-                Définissez la date, l'heure et les prestataires nécessaires, puis validez.
+                Définissez la date, l&apos;heure et les prestataires nécessaires, puis validez.
               </>
             ),
           },
@@ -142,7 +142,7 @@ export default function AideReferentPage() {
       />
 
       <p className="text-t-xs text-ink-400 pb-4">
-        Besoin d'aide supplémentaire ? Contactez votre administrateur de centre.
+        Besoin d&apos;aide supplémentaire ? Contactez votre administrateur de centre.
       </p>
     </div>
   );
