@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { eq, isNull, and } from "drizzle-orm";
 import { db, schema } from "@/server/db/client";
-import { requireRole } from "@/server/context/server-context";
+import { requireRole, requireAuth } from "@/server/context/server-context";
 import type { ServerContext } from "@/server/context/server-context";
 import { logAudit } from "@/server/queries/audit";
 import {
@@ -12,14 +12,17 @@ import {
   SoftDeleteUserSchema,
   ResendInvitationSchema,
   SetupPasswordSchema,
+  AcceptCguSchema,
   type CreateUserInput,
   type UpdateUserInput,
   type SoftDeleteUserInput,
   type ResendInvitationInput,
   type SetupPasswordInput,
+  type AcceptCguInput,
 } from "@/server/validations/user";
 import { auth } from "@/server/auth/config";
 import { sendInvitationEmail } from "@/server/emails/send-invitation";
+import { CURRENT_CGU_VERSION } from "@/server/constants/legal";
 
 // ---------------------------------------------------------------------------
 // Admin actions — super_admin only
@@ -310,7 +313,12 @@ export async function setupPassword(
 
       await tx
         .update(schema.user)
-        .set({ passwordSet: true, updatedAt: now })
+        .set({
+          passwordSet: true,
+          cguAcceptedAt: now,
+          cguVersion: CURRENT_CGU_VERSION,
+          updatedAt: now,
+        })
         .where(eq(schema.user.id, targetUser.id));
 
       await tx
@@ -323,12 +331,62 @@ export async function setupPassword(
         centreId: targetUser.centreId ?? null,
         role: targetUser.role as ServerContext["role"],
       };
-      await logAudit(minimalCtx, "update", "user", targetUser.id, { passwordSet: false }, { passwordSet: true });
+      await logAudit(
+        minimalCtx,
+        "update",
+        "user",
+        targetUser.id,
+        { passwordSet: false, cguAcceptedAt: null, cguVersion: null },
+        { passwordSet: true, cguAcceptedAt: now.toISOString(), cguVersion: CURRENT_CGU_VERSION }
+      );
 
       return targetUser.id;
     });
 
     return { ok: true, userId };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Re-consentement — utilisateur déjà authentifié, pas de requireRole
+// (requireRole redirige déjà vers /accept-cgu tant que non accepté : un appel
+// ici créerait une boucle de redirection).
+// ---------------------------------------------------------------------------
+
+export async function acceptCgu(
+  input: AcceptCguInput
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    AcceptCguSchema.parse(input);
+    const ctx = await requireAuth();
+    const now = new Date();
+
+    const [before] = await db
+      .select({ cguAcceptedAt: schema.user.cguAcceptedAt, cguVersion: schema.user.cguVersion })
+      .from(schema.user)
+      .where(eq(schema.user.id, ctx.userId));
+
+    await db
+      .update(schema.user)
+      .set({
+        cguAcceptedAt: now,
+        cguVersion: CURRENT_CGU_VERSION,
+        updatedAt: now,
+      })
+      .where(eq(schema.user.id, ctx.userId));
+
+    await logAudit(
+      ctx,
+      "update",
+      "user",
+      ctx.userId,
+      { cguAcceptedAt: before?.cguAcceptedAt ?? null, cguVersion: before?.cguVersion ?? null },
+      { cguAcceptedAt: now.toISOString(), cguVersion: CURRENT_CGU_VERSION }
+    );
+
+    return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
   }

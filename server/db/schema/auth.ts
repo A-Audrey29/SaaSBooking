@@ -26,6 +26,8 @@ export const user = pgTable(
     centreId: uuid("centre_id").references(() => centre.id, { onDelete: "set null" }), // nullable for super_admin
     role: text("role").notNull(), // CHECK constraint DB: super_admin | project_admin | referent | provider
     passwordSet: boolean("password_set").notNull().default(false),
+    cguAcceptedAt: timestamp("cgu_accepted_at", { mode: "date", withTimezone: true }),
+    cguVersion: text("cgu_version"),
     createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { mode: "date", withTimezone: true }), // soft delete

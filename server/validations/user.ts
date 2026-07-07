@@ -58,6 +58,15 @@ export const ResendInvitationSchema = z.object({
 export const SetupPasswordSchema = z.object({
   token: z.string().min(1, "Token requis"),
   password: z.string().min(8, "Mot de passe min 8 caractères"),
+  cguAccepted: z.literal(true, {
+    error: "Vous devez accepter les CGU pour activer votre compte",
+  }),
+});
+
+export const AcceptCguSchema = z.object({
+  cguAccepted: z.literal(true, {
+    error: "Vous devez accepter les CGU pour continuer",
+  }),
 });
 
 export const RequestPasswordResetSchema = z.object({
@@ -85,6 +94,7 @@ export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 export type SoftDeleteUserInput = z.infer<typeof SoftDeleteUserSchema>;
 export type ResendInvitationInput = z.infer<typeof ResendInvitationSchema>;
 export type SetupPasswordInput = z.infer<typeof SetupPasswordSchema>;
+export type AcceptCguInput = z.infer<typeof AcceptCguSchema>;
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 export type RequestPasswordResetInput = z.infer<typeof RequestPasswordResetSchema>;
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
