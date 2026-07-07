@@ -11,6 +11,8 @@ import { headers } from "next/headers";
 import { auth } from "@/server/auth/config";
 import { redirect } from "next/navigation";
 import { eq, and, isNull } from "drizzle-orm";
+import { db, schema } from "@/server/db/client";
+import { CURRENT_CGU_VERSION, ROLES_REQUIRING_CGU } from "@/server/constants/legal";
 
 export type AppRole = "super_admin" | "project_admin" | "referent" | "provider";
 
@@ -58,12 +60,26 @@ export async function requireAuth(): Promise<ServerContext> {
 
 /**
  * Require specific role(s), redirect if not authorized.
+ * Redirects to /accept-cgu if the role must accept the current CGU version
+ * and hasn't yet (skipped when the caller IS the /accept-cgu page itself).
  */
 export async function requireRole(...allowed: AppRole[]): Promise<ServerContext> {
   const ctx = await requireAuth();
   if (!allowed.includes(ctx.role)) {
     redirect("/");
   }
+
+  if ((ROLES_REQUIRING_CGU as readonly AppRole[]).includes(ctx.role)) {
+    const [row] = await db
+      .select({ cguVersion: schema.user.cguVersion })
+      .from(schema.user)
+      .where(eq(schema.user.id, ctx.userId));
+
+    if (row?.cguVersion !== CURRENT_CGU_VERSION) {
+      redirect("/accept-cgu");
+    }
+  }
+
   return ctx;
 }
 

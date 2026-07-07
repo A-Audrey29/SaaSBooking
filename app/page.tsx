@@ -1,7 +1,6 @@
 import { getServerContext } from "@/server/context/server-context";
 import { redirect } from "next/navigation";
 import Image from "next/image";
-import { LegalFooter } from "@/components/legal-footer";
 
 export default async function HomePage() {
   const ctx = await getServerContext();
@@ -85,8 +84,6 @@ export default async function HomePage() {
           Accéder à la plateforme
         </a>
       </main>
-
-      <LegalFooter />
     </div>
   );
 }

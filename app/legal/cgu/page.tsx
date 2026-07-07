@@ -79,41 +79,70 @@ export default function CguPage() {
 
         <h3 className="font-medium mb-2 mt-4">6.1 — Confidentialité des informations relatives au projet</h3>
         <p className="mb-2">
-          Dans le cadre de son référencement au sein du projet « Carnet d&apos;Accompagnement à la Parentalité – Mobilisation Familiale »,
-          le Prestataire reconnaît que les informations portées à sa connaissance via la Plateforme revêtent un caractère confidentiel.
+          Dans le cadre de son référencement et de son intervention au sein du projet « Carnet d&apos;Accompagnement à la
+          Parentalité – Mobilisation Familiale », le Prestataire reconnaît que les informations, documents, données, fichiers,
+          échanges, méthodes, procédures, ainsi que toute autre information portée à sa connaissance par l&apos;intermédiaire de la
+          plateforme ResaPresta ou de ses utilisateurs, revêtent un caractère strictement confidentiel.
         </p>
         <p className="mb-2">Le Prestataire s&apos;engage à :</p>
         <ul className="list-disc pl-5 space-y-1 mb-2">
-          <li>Ne divulguer aucune information confidentielle à un tiers ;</li>
+          <li>Ne divulguer aucune information confidentielle à un tiers, sous quelque forme que ce soit ;</li>
           <li>N&apos;utiliser les informations confidentielles qu&apos;aux seules fins de l&apos;exécution des prestations pour lesquelles il est sollicité ;</li>
-          <li>Mettre en œuvre les mesures nécessaires pour garantir la confidentialité, l&apos;intégrité et la protection des données auxquelles il a accès ;</li>
-          <li>Respecter les dispositions applicables en matière de protection des données personnelles, notamment le RGPD.</li>
+          <li>Mettre en œuvre toutes les mesures techniques, organisationnelles et de sécurité nécessaires afin de garantir la confidentialité, l&apos;intégrité et la protection des données auxquelles il a accès ;</li>
+          <li>Limiter l&apos;accès à ces informations à ses seuls collaborateurs, salariés ou sous-traitants directement concernés par l&apos;exécution de la prestation et soumis à une obligation de confidentialité équivalente ;</li>
+          <li>Respecter l&apos;ensemble des dispositions applicables en matière de protection des données personnelles, notamment le Règlement (UE) 2016/679 du 27 avril 2016 (RGPD) et toute réglementation nationale applicable.</li>
         </ul>
+        <p className="mb-2">
+          Le Prestataire s&apos;interdit notamment de copier, reproduire, transmettre, exploiter, diffuser ou conserver des
+          données au-delà de ce qui est strictement nécessaire à l&apos;exécution de sa mission.
+        </p>
         <p className="text-gray-600 italic">
-          Cette obligation demeure en vigueur pendant 5 ans suivant la fin de la relation contractuelle.
-          Toute violation pourra entraîner la suspension ou la suppression du référencement.
+          Cette obligation de confidentialité demeure en vigueur pendant toute la durée du référencement sur la plateforme
+          ResaPresta et pendant une période de cinq (5) ans suivant la fin de la relation contractuelle, quelle qu&apos;en soit la cause.
+          Toute violation pourra entraîner la suspension ou la suppression immédiate du référencement du Prestataire, sans
+          préjudice de toute action en réparation des préjudices subis par la FEVES ou les personnes concernées.
         </p>
 
-        <h3 className="font-medium mb-2 mt-4">6.2 — Communication des informations professionnelles aux fins de mise en relation</h3>
+        <h3 className="font-medium mb-2 mt-4">6.2 — Autorisation de communication des informations professionnelles</h3>
         <p className="mb-2">
-          En se référençant sur la Plateforme, le Prestataire autorise la FEVES à présenter aux référents des centres sociaux
-          ses informations professionnelles, notamment : son identité et ses coordonnées professionnelles, son numéro SIREN/SIRET
-          le cas échéant, ses domaines d&apos;intervention, compétences et disponibilités déclarées.
+          Le Prestataire autorise expressément la FEVES, en tant qu&apos;entité exploitant la plateforme ResaPresta, à collecter,
+          enregistrer, traiter, exploiter et communiquer aux clients, prospects, partenaires institutionnels ou financeurs de
+          projets les informations professionnelles qu&apos;il renseigne sur la plateforme. Cette autorisation porte notamment sur :
+        </p>
+        <ul className="list-disc pl-5 space-y-1 mb-2">
+          <li>son identité professionnelle ;</li>
+          <li>sa raison sociale ou son nom commercial ;</li>
+          <li>ses coordonnées professionnelles ;</li>
+          <li>son numéro SIREN/SIRET ;</li>
+          <li>ses domaines d&apos;intervention et compétences ;</li>
+          <li>ses certifications, habilitations et qualifications ;</li>
+          <li>ses références professionnelles ;</li>
+          <li>ses disponibilités ;</li>
+          <li>toute information nécessaire à son référencement et à sa mise en relation avec des clients ou prospects.</li>
+        </ul>
+        <p className="mb-2">
+          Le Prestataire autorise la FEVES à présenter, diffuser et transmettre ces informations par tout moyen, notamment via
+          sa plateforme numérique, ses supports commerciaux, ses propositions d&apos;intervention, ses réponses à appels à projets,
+          ses actions de prospection commerciale et ses opérations de mise en relation.
         </p>
         <p className="mb-2">
-          Cette communication est strictement limitée à la finalité de mise en relation et aux utilisateurs habilités de la Plateforme.
-          Elle ne constitue pas une autorisation de prospection commerciale ou de diffusion publique.
+          Le Prestataire reconnaît que cette diffusion constitue une condition essentielle de son référencement sur la
+          plateforme ResaPresta et qu&apos;elle a pour unique finalité la promotion de ses services et la facilitation de relations
+          d&apos;affaires. Le Prestataire garantit l&apos;exactitude des informations communiquées et s&apos;engage à les maintenir à jour ;
+          il demeure responsable des informations qu&apos;il fournit à la FEVES.
         </p>
         <p>
-          Le Prestataire peut à tout moment demander le retrait de son référencement. Ce retrait entraîne la cessation de la
-          communication de ses informations pour les mises en relation futures, sans effet sur les missions déjà engagées.
+          Cette autorisation est consentie pour toute la durée du référencement du Prestataire sur la plateforme et pourra être
+          révoquée par demande écrite, sous réserve des obligations légales de conservation et des engagements déjà contractés
+          avec des clients ou prospects avant la date de la demande.
         </p>
 
         <h3 className="font-medium mb-2 mt-4">6.3 — Absence de cession de clientèle</h3>
         <p>
-          Le référencement ne confère aucun droit de propriété sur la clientèle, les prospects ou les données de la Plateforme.
-          Le Prestataire s&apos;interdit d&apos;utiliser les informations obtenues à des fins de prospection directe en dehors des missions
-          pour lesquelles il a été mis en relation, sauf accord écrit préalable de la FEVES.
+          Le référencement du Prestataire sur ResaPresta et la communication de ses informations professionnelles ne confèrent
+          aucun droit de propriété sur la clientèle, les prospects ou les données de la plateforme. Le Prestataire s&apos;interdit
+          d&apos;utiliser les informations obtenues par l&apos;intermédiaire de ResaPresta à des fins de prospection directe en dehors des
+          missions pour lesquelles il a été mis en relation, sauf accord écrit préalable de la FEVES.
         </p>
       </section>
 
@@ -192,7 +221,7 @@ export default function CguPage() {
         </p>
       </section>
 
-      <p className="text-xs text-gray-400 mt-12">Dernière mise à jour : juin 2026.</p>
+      <p className="text-xs text-gray-400 mt-12">Dernière mise à jour : juillet 2026.</p>
     </div>
   );
 }

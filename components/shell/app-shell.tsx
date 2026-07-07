@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Avatar } from "./avatar";
 import { authClient } from "@/lib/auth-client";
-import { LegalFooter } from "@/components/legal-footer";
 
 export interface NavItem {
   href: string;
@@ -106,16 +105,13 @@ export function AppShell({ brand, spaceLabel, userName, items, children }: AppSh
         <main className="flex-1">
           {children}
         </main>
-        <div className="hidden md:block">
-          <LegalFooter />
-        </div>
       </div>
 
       {/* ── Mobile legal links ── */}
       <div className="md:hidden fixed bottom-14 inset-x-0 bg-sidebar border-t border-ink-150 z-20 flex justify-center gap-4 py-1.5 px-4">
-        <Link href="/cgu" className="text-t-xs text-ink-400 hover:underline">CGU</Link>
-        <Link href="/mentions-legales" className="text-t-xs text-ink-400 hover:underline">Mentions légales</Link>
-        <Link href="/confidentialite" className="text-t-xs text-ink-400 hover:underline">Confidentialité</Link>
+        <Link href="/legal/cgu" className="text-t-xs text-ink-400 hover:underline">CGU</Link>
+        <Link href="/legal/mentions-legales" className="text-t-xs text-ink-400 hover:underline">Mentions légales</Link>
+        <Link href="/legal/politique-confidentialite" className="text-t-xs text-ink-400 hover:underline">Confidentialité</Link>
         <span className="text-t-xs text-ink-400">© FEVES 2026</span>
       </div>
 

@@ -15,6 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { CguAcceptanceField } from "@/components/cgu-acceptance-field";
 import { SetupPasswordSchema } from "@/server/validations/user";
 import { setupPassword } from "@/app/admin/users/users.actions";
 
@@ -41,12 +42,19 @@ export function SetupPasswordClient({ token }: SetupPasswordClientProps) {
       token,
       password: "",
       confirmPassword: "",
+      cguAccepted: undefined,
     },
   });
 
+  const cguAccepted = form.watch("cguAccepted");
+
   const onSubmit = (data: SetupPasswordFormInput) => {
     startTransition(async () => {
-      const result = await setupPassword({ token: data.token, password: data.password });
+      const result = await setupPassword({
+        token: data.token,
+        password: data.password,
+        cguAccepted: data.cguAccepted,
+      });
       if (result.ok) {
         router.push("/login");
       } else {
@@ -95,13 +103,15 @@ export function SetupPasswordClient({ token }: SetupPasswordClientProps) {
               )}
             />
 
+            <CguAcceptanceField control={form.control} name="cguAccepted" />
+
             {form.formState.errors.root && (
               <div className="text-sm text-destructive">
                 {form.formState.errors.root.message}
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <Button type="submit" className="w-full" disabled={isPending || !cguAccepted}>
               {isPending ? "Activation…" : "Activer mon compte"}
             </Button>
           </form>

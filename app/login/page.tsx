@@ -1,6 +1,5 @@
 import { LoginForm } from "./login-form";
 import { DevLoginButtons } from "./dev-login-buttons";
-import { LegalFooter } from "@/components/legal-footer";
 
 interface LoginPageProps {
   searchParams: Promise<{ reset?: string }>;
@@ -23,7 +22,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <DevLoginButtons />
         </div>
       </div>
-      <LegalFooter />
     </div>
   );
 }
