@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/server/context/server-context";
 import {
   resolveProviderFromUser,
@@ -10,8 +10,11 @@ import { AvailabilityClient } from "./availability-client";
 export default async function DisposPage() {
   const ctx = await requireRole("provider");
 
+  // Compte prestataire dont le profil n'est pas encore créé : on l'envoie au
+  // formulaire de création (/pro/profile) plutôt que de lui afficher un 404,
+  // qui laissait croire à une application cassée.
   const prov = await resolveProviderFromUser(ctx.userId);
-  if (!prov) notFound();
+  if (!prov) redirect("/pro/profile");
 
   // Fenêtre de chargement : 3 mois avant → 6 mois après aujourd'hui.
   const now = new Date();
