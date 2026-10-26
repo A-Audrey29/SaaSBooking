@@ -25,6 +25,36 @@ import { sendInvitationEmail } from "@/server/emails/send-invitation";
 import { CURRENT_CGU_VERSION } from "@/server/constants/legal";
 
 // ---------------------------------------------------------------------------
+// Internal helpers (not exported: not callable as server actions)
+// ---------------------------------------------------------------------------
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+const INVITATION_VALIDITY_DAYS = 7;
+
+/** Creates a fresh invitation token (valid 7 days) for the given user. */
+async function issueInvitationToken(tx: Tx, userId: string): Promise<string> {
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + INVITATION_VALIDITY_DAYS);
+  const token = crypto.randomUUID();
+
+  await tx.insert(schema.userInvitation).values({ userId, token, expiresAt });
+
+  return token;
+}
+
+/** True when Postgres rejected the write because the email is already used by an active user. */
+function isEmailTakenError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    error.code === "23505" &&
+    "constraint" in error &&
+    error.constraint === "user_email_unique_active"
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Admin actions — super_admin only
 // ---------------------------------------------------------------------------
 
@@ -54,15 +84,7 @@ export async function createUser(
         })
         .returning();
 
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7);
-      const invitationToken = crypto.randomUUID();
-
-      await tx.insert(schema.userInvitation).values({
-        userId: created.id,
-        token: invitationToken,
-        expiresAt,
-      });
+      const invitationToken = await issueInvitationToken(tx, created.id);
 
       await logAudit(ctx, "create", "user", created.id, null, {
         email: created.email,
@@ -92,13 +114,7 @@ export async function createUser(
     revalidatePath("/admin/users");
     return { ok: true, emailSent };
   } catch (error) {
-    if (
-      error instanceof Error &&
-      "code" in error &&
-      error.code === "23505" &&
-      "constraint" in error &&
-      error.constraint === "user_email_unique_active"
-    ) {
+    if (isEmailTakenError(error)) {
       return { ok: false, error: "Un utilisateur avec cet email existe déjà" };
     }
     return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
@@ -107,12 +123,15 @@ export async function createUser(
 
 export async function updateUser(
   input: UpdateUserInput
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; emailChanged: boolean; invitationSent: boolean }
+  | { ok: false; error: string }
+> {
   try {
     const ctx = await requireRole("super_admin");
     const validated = UpdateUserSchema.parse(input);
 
-    await db.transaction(async (tx) => {
+    const { emailChanged, invitation } = await db.transaction(async (tx) => {
       const [before] = await tx
         .select()
         .from(schema.user)
@@ -122,29 +141,118 @@ export async function updateUser(
         throw new Error("Utilisateur introuvable ou supprimé");
       }
 
+      const now = new Date();
+      const emailChanged = before.email !== validated.email;
+
       const [after] = await tx
         .update(schema.user)
         .set({
+          email: validated.email,
           role: validated.role,
           centreId: validated.centreId,
-          updatedAt: new Date(),
+          updatedAt: now,
         })
         .where(eq(schema.user.id, validated.id))
         .returning();
+
+      let invitationToken: string | null = null;
+
+      if (emailChanged) {
+        // Les liens déjà envoyés à l'ancienne adresse ne doivent plus
+        // permettre d'activer le compte ou de changer le mot de passe :
+        // on les fait expirer (pas de DELETE physique, historique conservé).
+        await tx
+          .update(schema.userInvitation)
+          .set({ expiresAt: now })
+          .where(
+            and(
+              eq(schema.userInvitation.userId, validated.id),
+              isNull(schema.userInvitation.usedAt)
+            )
+          );
+        await tx
+          .update(schema.passwordReset)
+          .set({ expiresAt: now })
+          .where(
+            and(
+              eq(schema.passwordReset.userId, validated.id),
+              isNull(schema.passwordReset.usedAt)
+            )
+          );
+
+        // Déconnecte l'utilisateur partout (même mécanisme que le sign-out
+        // Better Auth). Effectif sous 5 min max à cause du cookieCache.
+        await tx.delete(schema.session).where(eq(schema.session.userId, validated.id));
+
+        // provider.email reçoit les notifications de mission : on le garde
+        // aligné sur l'email de connexion (BDR-010 : lien via user_id).
+        await tx
+          .update(schema.provider)
+          .set({ email: validated.email, updatedAt: now })
+          .where(
+            and(eq(schema.provider.userId, validated.id), isNull(schema.provider.deletedAt))
+          );
+
+        // Compte pas encore activé : nouvelle invitation vers la nouvelle adresse.
+        if (!before.passwordSet) {
+          invitationToken = await issueInvitationToken(tx, validated.id);
+        }
+      }
 
       await logAudit(
         ctx,
         "update",
         "user",
         validated.id,
-        { role: before.role, centreId: before.centreId },
-        { role: after.role, centreId: after.centreId }
+        { email: before.email, role: before.role, centreId: before.centreId },
+        {
+          email: after.email,
+          role: after.role,
+          centreId: after.centreId,
+          ...(invitationToken ? { invitationResent: true } : {}),
+        }
       );
+
+      return {
+        emailChanged,
+        invitation: invitationToken
+          ? { email: after.email, name: after.name, token: invitationToken }
+          : null,
+      };
     });
 
+    // Envoi hors transaction : un échec Resend ne doit pas annuler la mise à jour.
+    // L'admin peut toujours utiliser « Renvoyer » si l'email n'est pas parti.
+    let invitationSent = false;
+    if (invitation) {
+      try {
+        const [actor] = await db
+          .select({ name: schema.user.name })
+          .from(schema.user)
+          .where(eq(schema.user.id, ctx.userId));
+
+        const result = await sendInvitationEmail({
+          to: invitation.email,
+          name: invitation.name,
+          inviterName: actor?.name ?? ctx.userId,
+          token: invitation.token,
+        });
+        invitationSent = result.sent;
+        if (!result.sent && result.error) {
+          console.error("Failed to send invitation email after email change:", result.error);
+        }
+      } catch (emailError) {
+        console.error("Failed to send invitation email after email change:", emailError);
+      }
+    }
+
     revalidatePath("/admin/users");
-    return { ok: true };
+    if (emailChanged) revalidatePath("/admin/providers");
+    return { ok: true, emailChanged, invitationSent };
   } catch (error) {
+    if (isEmailTakenError(error)) {
+      return { ok: false, error: "Un utilisateur avec cet email existe déjà" };
+    }
     return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
   }
 }
@@ -228,15 +336,7 @@ export async function resendInvitation(
         .delete(schema.userInvitation)
         .where(eq(schema.userInvitation.userId, validated.id));
 
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7);
-      const invitationToken = crypto.randomUUID();
-
-      await tx.insert(schema.userInvitation).values({
-        userId: validated.id,
-        token: invitationToken,
-        expiresAt,
-      });
+      const invitationToken = await issueInvitationToken(tx, validated.id);
 
       await logAudit(ctx, "update", "user", validated.id, { passwordSet: false }, { invitationResent: true });
 
