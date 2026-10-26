@@ -28,6 +28,7 @@ export const CreateUserSchema = z
 export const UpdateUserSchema = z
   .object({
     id: z.string().uuid("ID invalide"),
+    email: z.string().email("Format email invalide").toLowerCase().trim(),
     role: roleEnum,
     centreId: z.string().uuid("centreId invalide").nullable().default(null),
   })

@@ -263,3 +263,11 @@ Schema:
 - **Decision**: Route `/dev-login` identifiée dans le build. Doit être supprimée avant tout déploiement prod.
 - **Why**: Contournement auth en dev — exposition en prod = faille critique.
 - **Status**: active — à exécuter en Session 3 avant déploiement
+
+### BDR-025: Modification de l'email utilisateur par le super_admin
+- **Date**: 2026-10-26
+- **Title**: Email de connexion modifiable dans /admin/users
+- **Decision**: `updateUser` accepte `email`. Si l'email change, dans la même transaction : (1) invitations et liens de reset non utilisés expirés (`expiresAt = now`, pas de DELETE), (2) sessions Better Auth de l'utilisateur supprimées (déconnexion), (3) `provider.email` synchronisé si un profil prestataire actif est lié (`user_id`), (4) si compte non activé (`passwordSet = false`) : nouveau token d'invitation, email envoyé hors transaction. Audit avant/après inclut l'email. Confirmation UI uniquement quand l'email change.
+- **Why**: Corriger une faute de frappe sans supprimer/recréer le compte. Sécurité : un lien déjà envoyé à une mauvaise adresse ne doit pas permettre d'activer le compte. Login Better Auth 1.6.23 = lookup par `user.email` puis compte `providerId = "credential"` → `account.accountId` non concerné. `provider.email` reçoit les notifications de mission → doit rester aligné sur l'email de connexion.
+- **Limites connues**: déconnexion effective sous 5 min max (`session.cookieCache.maxAge`, comportement préexistant). `provider.email` reste éditable séparément dans /admin/providers → divergence possible (dette préexistante, non traitée ici).
+- **Status**: active — aucune migration.

@@ -35,6 +35,7 @@ interface UserRow {
   name: string | null;
   role: string;
   centreId: string | null;
+  passwordSet: boolean | null;
 }
 
 interface Centre {
@@ -219,11 +220,14 @@ function CreateUserForm({ centres, onSuccess, onCancel }: SharedProps) {
 
 function EditUserForm({ user, centres, onSuccess, onCancel }: EditProps) {
   const [isPending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingData, setPendingData] = useState<UpdateUserInput | null>(null);
 
   const form = useForm<UpdateUserInput>({
     resolver: zodResolver(UpdateUserSchema) as Resolver<UpdateUserInput>,
     defaultValues: {
       id: user.id,
+      email: user.email,
       role: user.role as UpdateUserInput["role"],
       centreId: user.centreId ?? null,
     },
@@ -237,10 +241,15 @@ function EditUserForm({ user, centres, onSuccess, onCancel }: EditProps) {
     }
   }, [watchedRole, form]);
 
-  const onSubmit = (data: UpdateUserInput) => {
+  const save = (data: UpdateUserInput) => {
     startTransition(async () => {
       const result = await updateUser(data);
+      setConfirmOpen(false);
       if (result.ok) {
+        if (result.emailChanged && !user.passwordSet && !result.invitationSent) {
+          // TODO: replace with sonner toast when installed
+          console.warn("Email modifié — invitation non envoyée, utilisez Renvoyer");
+        }
         onSuccess();
       } else {
         form.setError("root", { message: result.error });
@@ -248,13 +257,48 @@ function EditUserForm({ user, centres, onSuccess, onCancel }: EditProps) {
     });
   };
 
+  // Changer l'email a des effets de bord (login, liens, sessions) :
+  // on demande confirmation uniquement dans ce cas.
+  const onSubmit = (data: UpdateUserInput) => {
+    if (data.email !== user.email.toLowerCase()) {
+      setPendingData(data);
+      setConfirmOpen(true);
+      return;
+    }
+    save(data);
+  };
+
   return (
+    <>
+      <EmailConfirmDialog
+        open={confirmOpen}
+        email={pendingData?.email ?? ""}
+        title="Modifier l'adresse email"
+        description={
+          user.passwordSet
+            ? "L'utilisateur sera déconnecté et devra se connecter avec"
+            : "L'ancienne invitation sera annulée et une nouvelle sera envoyée à"
+        }
+        confirmLabel="Confirmer"
+        onConfirm={() => pendingData && save(pendingData)}
+        onCancel={() => setConfirmOpen(false)}
+        isPending={isPending}
+      />
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-1">
-          <p className="text-sm font-medium">Email</p>
-          <p className="text-sm text-muted-foreground">{user.email}</p>
-        </div>
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input {...field} type="email" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <div className="space-y-1">
           <p className="text-sm font-medium">Nom</p>
           <p className="text-sm text-muted-foreground">{user.name ?? "—"}</p>
@@ -327,6 +371,7 @@ function EditUserForm({ user, centres, onSuccess, onCancel }: EditProps) {
         </div>
       </form>
     </Form>
+    </>
   );
 }
 
