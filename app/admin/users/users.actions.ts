@@ -11,17 +11,20 @@ import {
   UpdateUserSchema,
   SoftDeleteUserSchema,
   ResendInvitationSchema,
+  PreviewInvitationSchema,
   SetupPasswordSchema,
   AcceptCguSchema,
   type CreateUserInput,
   type UpdateUserInput,
   type SoftDeleteUserInput,
   type ResendInvitationInput,
+  type PreviewInvitationInput,
   type SetupPasswordInput,
   type AcceptCguInput,
 } from "@/server/validations/user";
 import { auth } from "@/server/auth/config";
-import { sendInvitationEmail } from "@/server/emails/send-invitation";
+import { buildInvitationEmail, sendInvitationEmail } from "@/server/emails/send-invitation";
+import { PREVIEW_LINK_PLACEHOLDER, type EmailPreviewResult } from "@/server/lib/email";
 import { CURRENT_CGU_VERSION } from "@/server/constants/legal";
 import { INVITATION_VALIDITY_DAYS } from "@/server/constants/invitation";
 
@@ -364,6 +367,53 @@ export async function resendInvitation(
 
     revalidatePath("/admin/users");
     return { ok: true, emailSent };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Email previews (read-only) — shown in the confirmation dialog before sending
+// ---------------------------------------------------------------------------
+
+/** Invitation email that createUser() will send for this email / name. */
+export async function previewInvitationEmail(
+  input: PreviewInvitationInput
+): Promise<EmailPreviewResult> {
+  try {
+    await requireRole("super_admin");
+    const { email, name } = PreviewInvitationSchema.parse(input);
+    const { subject, text } = buildInvitationEmail({
+      to: email,
+      name,
+      setupUrl: PREVIEW_LINK_PLACEHOLDER,
+    });
+    return { ok: true, preview: { to: email, subject, text } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
+  }
+}
+
+/** Invitation email that resendInvitation() will send to this existing user. */
+export async function previewResendInvitationEmail(
+  input: ResendInvitationInput
+): Promise<EmailPreviewResult> {
+  try {
+    await requireRole("super_admin");
+    const { id } = ResendInvitationSchema.parse(input);
+
+    const [found] = await db
+      .select({ email: schema.user.email, name: schema.user.name })
+      .from(schema.user)
+      .where(and(eq(schema.user.id, id), isNull(schema.user.deletedAt)));
+    if (!found) throw new Error("Utilisateur introuvable ou supprimé");
+
+    const { subject, text } = buildInvitationEmail({
+      to: found.email,
+      name: found.name,
+      setupUrl: PREVIEW_LINK_PLACEHOLDER,
+    });
+    return { ok: true, preview: { to: found.email, subject, text } };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
   }

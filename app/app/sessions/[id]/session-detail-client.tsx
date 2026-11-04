@@ -11,7 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { assignProviderToSlot, cancelSlotRequest, skipSlot } from "./session.actions";
+import {
+  assignProviderToSlot,
+  cancelSlotRequest,
+  previewCancellationEmail,
+  skipSlot,
+} from "./session.actions";
 import { EmailConfirmDialog } from "@/components/email-confirm-dialog";
 import type { SessionGroupDetail } from "@/server/queries/session-group";
 import type { ProviderForSlot } from "@/server/queries/ticket-slot";
@@ -101,6 +106,7 @@ function SlotRow({ slot, providers, sessionGroupId }: SlotRowProps) {
         onConfirm={handleCancelConfirm}
         onCancel={() => setCancelConfirmOpen(false)}
         isPending={isPending}
+        loadPreview={() => previewCancellationEmail({ slotId: slot.id, sessionGroupId })}
       />
     <div className="flex flex-col gap-2 py-2 border-b last:border-b-0">
       <div className="flex items-center justify-between gap-3">

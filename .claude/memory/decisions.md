@@ -271,3 +271,18 @@ Schema:
 - **Why**: Corriger une faute de frappe sans supprimer/recréer le compte. Sécurité : un lien déjà envoyé à une mauvaise adresse ne doit pas permettre d'activer le compte. Login Better Auth 1.6.23 = lookup par `user.email` puis compte `providerId = "credential"` → `account.accountId` non concerné. `provider.email` reçoit les notifications de mission → doit rester aligné sur l'email de connexion.
 - **Limites connues**: déconnexion effective sous 5 min max (`session.cookieCache.maxAge`, comportement préexistant). `provider.email` reste éditable séparément dans /admin/providers → divergence possible (dette préexistante, non traitée ici).
 - **Status**: active — aucune migration.
+
+### BDR-026: Supervision admin — journal, emails, dernière connexion, réservations
+- **Date**: 2026-11-04
+- **Title**: Écrans de supervision réservés au super_admin
+- **Decision**:
+  - Écrans `/admin` (dashboard), `/admin/reservations`, `/admin/journal` (onglets Activité + Emails), colonnes « Dernière connexion » + statut d'invitation dans `/admin/users`. **super_admin uniquement** (choix Audrey) ; le project_admin garde l'écran d'accueil simple.
+  - `user.last_login_at` (option B, choix Audrey) mis à jour par `databaseHooks.session.create.after` de Better Auth (try/catch : n'empêche jamais le login). Backfill dans la migration 0023 depuis `MAX(session.created_at)`.
+  - Table `email_log` (type, statut sent/failed/skipped, destinataire, sujet, erreur). **Pas de corps d'email stocké** (liens d'activation/reset sensibles). Pas de `deleted_at` : log technique append-only, comme `audit_log`. Enums au niveau TS uniquement (pas de CHECK DB) : valeurs écrites par notre code seul.
+  - Tous les envois passent par `deliverEmail()` (`server/lib/email.ts`). Corrige un bug : Resend SDK v4 ne lève pas d'exception sur erreur d'API (`{ data, error }`), les 5 senders renvoyaient `sent: true` même en cas de refus.
+  - Seuil « demande sans réponse » = **5 jours** (choix Audrey), constante `STALE_PENDING_DAYS`.
+  - Listes limitées (200 lignes journal, 500 réservations), pas de pagination en V1.
+- **Why**: Donner au super_admin une vision de l'activité sans ouvrir Neon ni Resend. Pas de relance automatique : jobs async interdits en V1.
+- **Limites connues**: `last_login_at` NULL pour un utilisateur dont toutes les sessions ont été supprimées avant la migration (déconnexion, changement d'email BDR-025). La date = dernière **connexion** (création de session), pas la dernière visite : un utilisateur resté connecté n'est pas mis à jour.
+  - **Aperçu avant envoi** (choix Audrey) dans les fenêtres « Envoyer / Renvoyer l'invitation » et « Annuler la demande ». Server actions en lecture seule (`previewInvitationEmail`, `previewResendInvitationEmail`, `previewCancellationEmail`) qui appellent les **mêmes** `build*Email()` que l'envoi réel → l'aperçu ne peut pas diverger. Lien personnel remplacé par `PREVIEW_LINK_PLACEHOLDER` (le token n'existe qu'à l'envoi). Un aperçu en erreur ne bloque jamais l'envoi.
+- **Status**: active — migration 0023 appliquée sur **dev** le 2026-11-04, **pas en prod**.

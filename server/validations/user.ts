@@ -56,6 +56,13 @@ export const ResendInvitationSchema = z.object({
   id: z.string().uuid("ID invalide"),
 });
 
+/** Preview of the invitation email before createUser (form already validated client-side). */
+export const PreviewInvitationSchema = z.object({
+  email: z.string().email("Format email invalide").toLowerCase().trim(),
+  name: z.string().max(100).trim().nullable().default(null),
+});
+export type PreviewInvitationInput = z.input<typeof PreviewInvitationSchema>;
+
 export const SetupPasswordSchema = z.object({
   token: z.string().min(1, "Token requis"),
   password: z.string().min(8, "Mot de passe min 8 caractères"),

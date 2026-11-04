@@ -28,6 +28,9 @@ export const user = pgTable(
     passwordSet: boolean("password_set").notNull().default(false),
     cguAcceptedAt: timestamp("cgu_accepted_at", { mode: "date", withTimezone: true }),
     cguVersion: text("cgu_version"),
+    // Set by Better Auth databaseHooks.session.create.after (server/auth/config.ts).
+    // NULL = never logged in since the column was added (backfilled from session table).
+    lastLoginAt: timestamp("last_login_at", { mode: "date", withTimezone: true }),
     createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { mode: "date", withTimezone: true }), // soft delete

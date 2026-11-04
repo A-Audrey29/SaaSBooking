@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import type { InferSelectModel } from "drizzle-orm";
+import { eq, type InferSelectModel } from "drizzle-orm";
 import { db } from "@/server/db/client";
 import * as schema from "@/server/db/schema";
 
@@ -33,6 +33,27 @@ export const auth = betterAuth({
     },
   },
   plugins: [],
+  databaseHooks: {
+    session: {
+      create: {
+        // A new session row = a successful login. Record it for /admin/users.
+        // Wrapped in try/catch: a failure here must never block the login itself.
+        after: async (session) => {
+          try {
+            await db
+              .update(schema.user)
+              .set({ lastLoginAt: new Date() })
+              .where(eq(schema.user.id, session.userId));
+          } catch (e) {
+            console.error("[auth] Échec mise à jour last_login_at", {
+              userId: session.userId,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+        },
+      },
+    },
+  },
   session: {
     cookieCache: {
       enabled: true,

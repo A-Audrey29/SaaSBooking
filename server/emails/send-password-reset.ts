@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Resend } from "resend";
+import { deliverEmail } from "@/server/lib/email";
 
 interface SendPasswordResetEmailParams {
   to: string;
@@ -38,26 +38,11 @@ Votre identifiant de connexion : ${to}
 ---
 L'équipe Cap pour FEVES`;
 
-  if (!process.env.RESEND_API_KEY || process.env.NODE_ENV !== "production") {
-    console.log("[send-password-reset] Email non envoyé (dev/missing key)", {
-      to,
-      resetUrl,
-    });
-    return { sent: false };
-  }
-
-  try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? "noreply@resapresta.fr",
-      to,
-      subject: "Réinitialisation de votre mot de passe ResaPresta",
-      text: body,
-    });
-    return { sent: true };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Erreur inconnue";
-    console.error("[send-password-reset] Échec envoi Resend", { to, error: message });
-    return { sent: false, error: message };
-  }
+  return deliverEmail({
+    type: "password_reset",
+    to,
+    subject: "Réinitialisation de votre mot de passe ResaPresta",
+    text: body,
+    devLog: { resetUrl },
+  });
 }

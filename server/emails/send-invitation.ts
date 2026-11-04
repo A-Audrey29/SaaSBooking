@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Resend } from "resend";
+import { deliverEmail } from "@/server/lib/email";
 import { INVITATION_VALIDITY_DAYS } from "@/server/constants/invitation";
 
 interface SendInvitationEmailParams {
@@ -15,15 +15,33 @@ interface SendInvitationEmailResult {
   error?: string;
 }
 
+// inviterName is part of the public signature but not used in the text (pre-existing).
 export async function sendInvitationEmail({
   to,
   name,
-  inviterName,
   token,
 }: SendInvitationEmailParams): Promise<SendInvitationEmailResult> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const setupUrl = `${appUrl}/setup-password?token=${token}`;
-  const displayName = name ?? to;
+  const { subject, text } = buildInvitationEmail({ to, name, setupUrl });
+
+  return deliverEmail({ type: "invitation", to, subject, text, devLog: { setupUrl } });
+}
+
+/**
+ * Subject + text of the invitation email. Single source for the real send
+ * and the preview (preview passes PREVIEW_LINK_PLACEHOLDER as setupUrl).
+ */
+export function buildInvitationEmail({
+  to,
+  name,
+  setupUrl,
+}: {
+  to: string;
+  name: string | null;
+  setupUrl: string;
+}): { subject: string; text: string } {
+  const displayName = name || to;
 
   const body = `Bonjour ${displayName},
 
@@ -73,26 +91,8 @@ Notre service support est à votre disposition pour toute question :
 Cordialement,
 L'équipe Cap pour FEVES Guadeloupe`;
 
-  if (!process.env.RESEND_API_KEY || process.env.NODE_ENV !== "production") {
-    console.log("[send-invitation] Email non envoyé (dev/missing key)", {
-      to,
-      setupUrl,
-    });
-    return { sent: false };
-  }
-
-  try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? "noreply@resapresta.fr",
-      to,
-      subject: "Votre accès à ResaPresta — Configurez votre mot de passe",
-      text: body,
-    });
-    return { sent: true };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Erreur inconnue";
-    console.error("[send-invitation] Échec envoi Resend", { to, error: message });
-    return { sent: false, error: message };
-  }
+  return {
+    subject: "Votre accès à ResaPresta — Configurez votre mot de passe",
+    text: body,
+  };
 }

@@ -36,19 +36,28 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { UserForm } from "./user-form";
-import { softDeleteUser, resendInvitation } from "./users.actions";
+import { softDeleteUser, resendInvitation, previewResendInvitationEmail } from "./users.actions";
 import { EmailConfirmDialog } from "@/components/email-confirm-dialog";
+import type { AdminUserRow, InvitationStatus } from "@/server/queries/admin-supervision";
+import { formatAgo, formatDateTime } from "../_components/format";
 
-interface User {
-  id: string;
-  email: string;
-  name: string | null;
-  role: string;
-  centreId: string | null;
-  centreNom: string | null;
-  passwordSet: boolean | null;
-  createdAt: Date;
-}
+type User = AdminUserRow;
+
+const INVITATION_BADGE: Record<InvitationStatus, { label: string; className: string }> = {
+  active: { label: "Actif", className: "bg-green-600 text-white hover:bg-green-600" },
+  invitation_pending: {
+    label: "Invitation envoyée",
+    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
+  },
+  invitation_expired: {
+    label: "Invitation expirée",
+    className: "bg-red-100 text-red-800 hover:bg-red-100",
+  },
+  no_invitation: {
+    label: "Pas d'invitation",
+    className: "bg-gray-100 text-gray-700 hover:bg-gray-100",
+  },
+};
 
 interface Centre {
   id: string;
@@ -174,13 +183,14 @@ export function UsersClient({ users, centres }: UsersClientProps) {
               <TableHead>Rôle</TableHead>
               <TableHead>Centre</TableHead>
               <TableHead>Statut</TableHead>
+              <TableHead>Dernière connexion</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   Aucun utilisateur trouvé
                 </TableCell>
               </TableRow>
@@ -192,15 +202,18 @@ export function UsersClient({ users, centres }: UsersClientProps) {
                   <TableCell>{roleLabel[user.role] ?? user.role}</TableCell>
                   <TableCell>{user.centreNom ?? "—"}</TableCell>
                   <TableCell>
-                    {user.passwordSet ? (
-                      <Badge variant="default" className="bg-green-600 hover:bg-green-600">
-                        Actif
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-                        Invitation envoyée
-                      </Badge>
-                    )}
+                    <Badge
+                      variant="secondary"
+                      className={INVITATION_BADGE[user.invitationStatus].className}
+                    >
+                      {INVITATION_BADGE[user.invitationStatus].label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell
+                    className="whitespace-nowrap"
+                    title={user.lastLoginAt ? formatDateTime(user.lastLoginAt) : undefined}
+                  >
+                    {user.lastLoginAt ? formatAgo(user.lastLoginAt) : "Jamais"}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button
@@ -273,6 +286,9 @@ export function UsersClient({ users, centres }: UsersClientProps) {
         onConfirm={handleResendConfirm}
         onCancel={() => setResendTarget(null)}
         isPending={isPending}
+        loadPreview={
+          resendTarget ? () => previewResendInvitationEmail({ id: resendTarget.id }) : undefined
+        }
       />
 
       <AlertDialog
