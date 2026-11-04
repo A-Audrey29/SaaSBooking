@@ -23,6 +23,7 @@ import {
 import { auth } from "@/server/auth/config";
 import { sendInvitationEmail } from "@/server/emails/send-invitation";
 import { CURRENT_CGU_VERSION } from "@/server/constants/legal";
+import { INVITATION_VALIDITY_DAYS } from "@/server/constants/invitation";
 
 // ---------------------------------------------------------------------------
 // Internal helpers (not exported: not callable as server actions)
@@ -30,9 +31,7 @@ import { CURRENT_CGU_VERSION } from "@/server/constants/legal";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-const INVITATION_VALIDITY_DAYS = 7;
-
-/** Creates a fresh invitation token (valid 7 days) for the given user. */
+/** Creates a fresh invitation token (valid INVITATION_VALIDITY_DAYS days) for the given user. */
 async function issueInvitationToken(tx: Tx, userId: string): Promise<string> {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + INVITATION_VALIDITY_DAYS);
@@ -45,12 +44,15 @@ async function issueInvitationToken(tx: Tx, userId: string): Promise<string> {
 
 /** True when Postgres rejected the write because the email is already used by an active user. */
 function isEmailTakenError(error: unknown): boolean {
+  // drizzle-orm >= 0.44 wraps the Postgres error in DrizzleQueryError:
+  // the pg fields (code, constraint) live on `.cause`, not on the wrapper.
+  const pgError = error instanceof Error && error.cause ? error.cause : error;
   return (
-    error instanceof Error &&
-    "code" in error &&
-    error.code === "23505" &&
-    "constraint" in error &&
-    error.constraint === "user_email_unique_active"
+    pgError instanceof Error &&
+    "code" in pgError &&
+    pgError.code === "23505" &&
+    "constraint" in pgError &&
+    pgError.constraint === "user_email_unique_active"
   );
 }
 
@@ -115,7 +117,11 @@ export async function createUser(
     return { ok: true, emailSent };
   } catch (error) {
     if (isEmailTakenError(error)) {
-      return { ok: false, error: "Un utilisateur avec cet email existe déjà" };
+      return {
+        ok: false,
+        error:
+          "Cet email est déjà utilisé par un compte existant. Si la personne n'a pas encore activé son compte, utilisez « Renvoyer » dans la liste des utilisateurs.",
+      };
     }
     return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
   }
@@ -251,7 +257,7 @@ export async function updateUser(
     return { ok: true, emailChanged, invitationSent };
   } catch (error) {
     if (isEmailTakenError(error)) {
-      return { ok: false, error: "Un utilisateur avec cet email existe déjà" };
+      return { ok: false, error: "Cet email est déjà utilisé par un autre compte." };
     }
     return { ok: false, error: error instanceof Error ? error.message : "Erreur inconnue" };
   }
