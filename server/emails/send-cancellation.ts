@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Resend } from "resend";
+import { deliverEmail } from "@/server/lib/email";
 
 interface SendCancellationEmailParams {
   to: string;
@@ -14,12 +14,19 @@ interface SendCancellationEmailResult {
   error?: string;
 }
 
-export async function sendCancellationEmail({
-  to,
+export async function sendCancellationEmail(
+  params: SendCancellationEmailParams
+): Promise<SendCancellationEmailResult> {
+  const { subject, text } = buildCancellationEmail(params);
+  return deliverEmail({ type: "cancellation", to: params.to, subject, text });
+}
+
+/** Subject + text of the cancellation email. Single source for the real send and the preview. */
+export function buildCancellationEmail({
   providerName,
   sessionNom,
   occurrenceDate,
-}: SendCancellationEmailParams): Promise<SendCancellationEmailResult> {
+}: Omit<SendCancellationEmailParams, "to">): { subject: string; text: string } {
   const dateStr = occurrenceDate
     ? new Intl.DateTimeFormat("fr-FR", {
         weekday: "long",
@@ -40,23 +47,8 @@ Si vous avez des questions, contactez directement le centre social concerné.
 
 L'équipe Cap pour FEVES`;
 
-  if (!process.env.RESEND_API_KEY || process.env.NODE_ENV !== "production") {
-    console.log("[send-cancellation] Email non envoyé (dev/missing key)", { to, sessionNom });
-    return { sent: false };
-  }
-
-  try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? "noreply@resapresta.fr",
-      to,
-      subject: `Atelier Passerelle CAPDemande annulée — ${sessionNom}`,
-      text: body,
-    });
-    return { sent: true };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Erreur inconnue";
-    console.error("[send-cancellation] Échec envoi Resend", { to, error: message });
-    return { sent: false, error: message };
-  }
+  return {
+    subject: `Atelier Passerelle CAP — Demande annulée — ${sessionNom}`,
+    text: body,
+  };
 }

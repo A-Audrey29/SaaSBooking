@@ -26,7 +26,7 @@ import {
   type CreateUserInput,
   type UpdateUserInput,
 } from "@/server/validations/user";
-import { createUser, updateUser } from "./users.actions";
+import { createUser, updateUser, previewInvitationEmail } from "./users.actions";
 import { EmailConfirmDialog } from "@/components/email-confirm-dialog";
 
 interface UserRow {
@@ -117,6 +117,11 @@ function CreateUserForm({ centres, onSuccess, onCancel }: SharedProps) {
         onConfirm={handleConfirm}
         onCancel={() => setConfirmOpen(false)}
         isPending={isPending}
+        loadPreview={
+          pendingData
+            ? () => previewInvitationEmail({ email: pendingData.email, name: pendingData.name })
+            : undefined
+        }
       />
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

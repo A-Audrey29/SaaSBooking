@@ -378,13 +378,15 @@ Granularité : 30 min. Format heure : `"HH:MM"` en timezone `America/Guadeloupe`
 
 ### 7.1 Entités loggées en V1
 
-| Entité | Actions loggées |
-|---|---|
-| `ticket_slot` | Transitions de statut uniquement — `before.statut` + `after.statut` + acteur |
+`logAudit()` est appelé dans les server actions de : `ticket_slot` (transitions de statut), `session_group`, `centre`, `project`, `project_centre`, `provider`, `provider_assignment`, `user`, `workshop`, `workshop_type`, `workshop_role_group`, `workshop_role_slot`, `metier`.
 
-### 7.2 Déféré V1.5
+Consultation : `/admin/journal` (onglet Activité), super_admin uniquement (BDR-026).
 
-Audit complet prévu (non implémenté) : `user`, `centre`, `project`, `provider_assignment`.
+### 7.2 Journal des emails
+
+Table `email_log` alimentée par `deliverEmail()` (`server/lib/email.ts`) pour chaque email transactionnel : type, destinataire, sujet, statut `sent | failed | skipped`, erreur. Pas de corps d'email stocké. Consultation : `/admin/journal` (onglet Emails).
+
+Dernière connexion : `user.last_login_at`, mise à jour à chaque création de session (hook Better Auth). Affichée dans `/admin/users`.
 
 ### 7.3 Implémentation
 
