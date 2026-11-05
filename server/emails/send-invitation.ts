@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Resend } from "resend";
+import { INVITATION_VALIDITY_DAYS } from "@/server/constants/invitation";
 
 interface SendInvitationEmailParams {
   to: string;
@@ -54,7 +55,7 @@ COMMENT REVENIR SUR LA PLATEFORME ?
 
 Votre identifiant de connexion : ${to}
 
-Important : ce lien est valable 7 jours.
+Important : ce lien est valable ${INVITATION_VALIDITY_DAYS} jours.
 Passé ce délai, un nouveau lien vous sera nécessaire.
 
 ─────────────────────────────────
